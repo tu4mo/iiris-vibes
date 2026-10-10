@@ -1,7 +1,6 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
-import { cssColor, type TailwindColor } from '../../drawing/colors'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { cssColor } from '../../drawing/colors'
 import type { Drawing } from '../../drawing/types'
-import { SNAIL_FRAMES, SNAIL_SQUISHED, SQUISH_SPREAD } from '../../game/snail'
 import {
   findEye,
   spriteFromDrawing,
@@ -9,17 +8,10 @@ import {
   withEyeClosed,
   type Sprite,
 } from '../../game/sprite'
-import {
-  DAY_SKY,
-  DUSK_SKY,
-  generateBackdrop,
-  generateField,
-  skyRows,
-  type BackdropPixel,
-  type Field,
-} from '../../game/world'
+import { DAY_SKY, DUSK_SKY, generateBackdrop, generateField, type Field } from '../../game/world'
 import { PencilIcon } from '../icons'
 import { maneBorderStyle } from '../mane'
+import { BackdropView, FieldView, Snails, SkyView, SpriteIcon, Unicorn } from './views'
 
 const FIELD_WIDTH = 900
 const FIELD_ROWS = 96
@@ -40,184 +32,6 @@ const BLINK_EVERY = 3200
 const BLINK_FOR = 150
 // How long each snail horn pose lasts, in ms.
 const HORN_FRAME = 280
-
-type FieldViewProps = { field: Field; cell: number }
-
-// Every pixel of the field as a div. Rendered once; the camera moves it with a transform.
-// Open-sky cells are transparent so the backdrop and sky show through.
-const FieldView = memo(function FieldView({ field, cell }: FieldViewProps) {
-  return (
-    <div className="flex">
-      {field.columns.map((colors, x) => (
-        <div key={x} className="flex shrink-0 flex-col" style={{ width: cell }}>
-          {colors.map((color, y) => (
-            <div
-              key={y}
-              style={{
-                height: cell,
-                backgroundColor: color ? cssColor(color) : undefined,
-              }}
-            />
-          ))}
-        </div>
-      ))}
-    </div>
-  )
-})
-
-type SkyViewProps = { sky: TailwindColor[]; rows: number; cell: number; opacity?: number }
-
-// The sky never moves: its bands are horizontal, so each row is a single div, and dithered
-// rows use a checker pattern of the two band colors.
-const SkyView = memo(function SkyView({ sky, rows, cell, opacity }: SkyViewProps) {
-  return (
-    <div className="absolute inset-x-0 bottom-0" style={{ opacity }}>
-      {skyRows(rows, sky).map((row, y) => (
-        <div
-          key={y}
-          style={{
-            height: cell,
-            backgroundColor: cssColor(row.color),
-            backgroundImage: row.dither
-              ? `repeating-linear-gradient(to right, ${cssColor(row.dither)} 0 ${cell}px, transparent ${cell}px ${cell * 2}px)`
-              : undefined,
-            backgroundPosition: y % 2 === 0 ? '0 0' : `${cell}px 0`,
-          }}
-        />
-      ))}
-    </div>
-  )
-})
-
-type BackdropViewProps = {
-  pixels: BackdropPixel[]
-  width: number
-  rows: number
-  cell: number
-}
-
-// Clouds and the rainbow, one div per pixel. Scrolls slower than the field for parallax.
-const BackdropView = memo(function BackdropView({ pixels, width, rows, cell }: BackdropViewProps) {
-  return (
-    <div className="relative" style={{ width: width * cell, height: rows * cell }}>
-      {pixels.map((p) => (
-        <div
-          key={`${p.x},${p.y}`}
-          className="absolute"
-          style={{
-            left: p.x * cell,
-            top: p.y * cell,
-            width: cell,
-            height: cell,
-            backgroundColor: cssColor(p.color),
-          }}
-        />
-      ))}
-    </div>
-  )
-})
-
-type SnailProps = { pixels: Map<string, TailwindColor>; left: number; bottom: number; cell: number }
-
-// One snail as pixel divs. `bottom` is the row its foot sits on; keys are "x,u", u upward.
-const Snail = memo(function Snail({ pixels, left, bottom, cell }: SnailProps) {
-  return [...pixels].map(([key, color]) => {
-    const [x, u] = key.split(',').map(Number)
-    return (
-      <div
-        key={key}
-        className="absolute"
-        style={{
-          left: (left + x) * cell,
-          top: (bottom - u) * cell,
-          width: cell,
-          height: cell,
-          backgroundColor: cssColor(color),
-        }}
-      />
-    )
-  })
-})
-
-type SnailsProps = { field: Field; cell: number; tick: number; squished: number[] }
-
-// The snails, drawn over the field since they move: their horns wiggle, each snail a few
-// frames out of step with the one before, and they flatten for a moment when jumped on.
-const Snails = memo(function Snails({ field, cell, tick, squished }: SnailsProps) {
-  return field.snails.map((snail, i) => {
-    const bottom = field.rows - snail.ground - 1
-    return squished.includes(i) ? (
-      <Snail
-        key={i}
-        pixels={SNAIL_SQUISHED}
-        left={snail.left - SQUISH_SPREAD}
-        bottom={bottom}
-        cell={cell}
-      />
-    ) : (
-      <Snail
-        key={i}
-        pixels={SNAIL_FRAMES[(tick + i * 2) % SNAIL_FRAMES.length]}
-        left={snail.left}
-        bottom={bottom}
-        cell={cell}
-      />
-    )
-  })
-})
-
-type UnicornProps = { sprite: Sprite; cell: number; facing: 1 | -1 }
-
-const Unicorn = memo(function Unicorn({ sprite, cell, facing }: UnicornProps) {
-  return (
-    <div
-      className="relative"
-      // The drawing faces right; mirror it when walking left.
-      style={{
-        width: sprite.width * cell,
-        height: sprite.height * cell,
-        transform: `scaleX(${facing})`,
-      }}
-    >
-      {sprite.pixels.map((p) => (
-        <div
-          key={`${p.x},${p.y}`}
-          className="absolute"
-          style={{
-            left: p.x * cell,
-            top: p.y * cell,
-            width: cell,
-            height: cell,
-            backgroundColor: cssColor(p.color),
-          }}
-        />
-      ))}
-    </div>
-  )
-})
-
-// The unicorn drawn small as an SVG, for the button that opens the editor.
-function SpriteIcon({ sprite }: { sprite: Sprite }) {
-  return (
-    <svg
-      className="h-12 w-auto"
-      viewBox={`0 0 ${sprite.width} ${sprite.height}`}
-      shapeRendering="crispEdges"
-      aria-hidden="true"
-    >
-      {sprite.pixels.map((p) => (
-        <rect
-          key={`${p.x},${p.y}`}
-          x={p.x}
-          y={p.y}
-          width={1}
-          height={1}
-          style={{ fill: cssColor(p.color) }}
-        />
-      ))}
-    </svg>
-  )
-}
 
 type GameProps = {
   drawing: Drawing
@@ -441,7 +255,7 @@ function GameRun({ drawing, paused, onEdit, onRestart }: GameRunProps) {
         setSquished(squishedNow)
       }
       // Inside once the unicorn's left edge is through the doorway.
-      if (position >= field.door.left) {
+      if (position >= field.doorLeft) {
         finished = true
         setStep(null)
         setWon(true)
@@ -482,7 +296,7 @@ function GameRun({ drawing, paused, onEdit, onRestart }: GameRunProps) {
   const backdropX = Math.round(cameraX * PARALLAX)
 
   // Evening falls on the way: 0 at the start, 1 at the castle door, eased in and out.
-  const journey = Math.min(1, Math.max(0, (unicornX - START_X) / (field.door.left - START_X)))
+  const journey = Math.min(1, Math.max(0, (unicornX - START_X) / (field.doorLeft - START_X)))
   const dusk = journey * journey * (3 - 2 * journey)
 
   const shown =

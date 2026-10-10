@@ -6,18 +6,16 @@ import type { useAnchoredPopover } from './useAnchoredPopover'
 type ToolbarPopoverProps = {
   popoverProps: ReturnType<typeof useAnchoredPopover>['popoverProps']
   label: string
-  // Padding differs per panel, so it's passed in rather than baked in.
-  className?: string
   children: ReactNode
 }
 
 // The panel a toolbar button opens, styled to match the toolbar.
-export function ToolbarPopover({ popoverProps, label, className = '', children }: ToolbarPopoverProps) {
+export function ToolbarPopover({ popoverProps, label, children }: ToolbarPopoverProps) {
   return (
     <div
       {...popoverProps}
       aria-label={label}
-      className={`fixed inset-auto m-0 max-h-[calc(100dvh-16px)] overflow-y-auto rounded-xl border border-white/10 bg-indigo-950 text-sky-100 shadow-[6px_6px_0_rgb(30_27_75/0.25)] ${className}`}
+      className="fixed inset-auto m-0 p-1.5 max-h-[calc(100dvh-16px)] overflow-y-auto rounded-xl border border-white/10 bg-indigo-950 text-sky-100 shadow-[6px_6px_0_rgb(30_27_75/0.25)]"
     >
       {children}
     </div>

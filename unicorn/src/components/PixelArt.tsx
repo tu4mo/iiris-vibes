@@ -1,7 +1,7 @@
 import { useId } from 'react'
-import { cssColor } from '../drawing/colors'
+import { cssColor, type TailwindColor } from '../drawing/colors'
 import { GRID_SIZE, cellKey } from '../drawing/grid'
-import { compositePixels, type CompositePixel } from '../drawing/layers'
+import { compositePixels } from '../drawing/layers'
 import type { Drawing } from '../drawing/types'
 
 type PixelArtProps = {
@@ -13,7 +13,12 @@ type PixelArtProps = {
   className?: string
 }
 
-function rects(pixels: CompositePixel[]) {
+// Pixels as 1x1 SVG rects, for an SVG whose viewBox is in cells.
+export function PixelRects({
+  pixels,
+}: {
+  pixels: { x: number; y: number; color: TailwindColor }[]
+}) {
   return pixels.map((p) => (
     <rect
       key={cellKey(p)}
@@ -48,11 +53,11 @@ export function PixelArt({ drawing, label, highlightLayerId, className }: PixelA
             <feColorMatrix type="saturate" values="0" />
           </filter>
           <g filter={`url(#${grayscaleId})`} opacity={0.3}>
-            {rects(dimmed)}
+            <PixelRects pixels={dimmed} />
           </g>
         </>
       )}
-      {rects(bright)}
+      <PixelRects pixels={bright} />
     </svg>
   )
 }

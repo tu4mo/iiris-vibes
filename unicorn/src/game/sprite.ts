@@ -1,13 +1,10 @@
-import type { TailwindColor } from '../drawing/colors'
+import { cellKey, type Cell } from '../drawing/grid'
 import { compositePixels } from '../drawing/layers'
-import type { Drawing } from '../drawing/types'
+import type { Drawing, Pixel } from '../drawing/types'
+import { SIDES, type Shape } from './shape'
 
-export type Sprite = {
-  width: number
-  height: number
-  // Pixel positions relative to the sprite's top-left corner.
-  pixels: { x: number; y: number; color: TailwindColor }[]
-}
+// The unicorn in the game: a shape cropped from the drawing.
+export type Sprite = Shape
 
 // The designed unicorn as a sprite: every visible layer, cropped tight.
 export function spriteFromDrawing(drawing: Drawing): Sprite {
@@ -22,28 +19,27 @@ export function spriteFromDrawing(drawing: Drawing): Sprite {
   }
 }
 
-type SpritePixel = Sprite['pixels'][number]
+// The cell next to `cell` in direction [dx, dy].
+const step = (cell: Cell, [dx, dy]: readonly [number, number]) => ({
+  x: cell.x + dx,
+  y: cell.y + dy,
+})
 
 // Groups of pixels connected edge to edge.
-function connectedGroups(pixels: SpritePixel[]): SpritePixel[][] {
-  const byKey = new Map(pixels.map((p) => [`${p.x},${p.y}`, p]))
+function connectedGroups(pixels: Pixel[]): Pixel[][] {
+  const byKey = new Map(pixels.map((p) => [cellKey(p), p]))
   const seen = new Set<string>()
-  const groups: SpritePixel[][] = []
+  const groups: Pixel[][] = []
   for (const start of pixels) {
-    if (seen.has(`${start.x},${start.y}`)) continue
-    const group: SpritePixel[] = []
+    if (seen.has(cellKey(start))) continue
+    const group: Pixel[] = []
     const stack = [start]
-    seen.add(`${start.x},${start.y}`)
+    seen.add(cellKey(start))
     while (stack.length > 0) {
       const p = stack.pop()!
       group.push(p)
-      for (const [dx, dy] of [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ]) {
-        const key = `${p.x + dx},${p.y + dy}`
+      for (const side of SIDES) {
+        const key = cellKey(step(p, side))
         const next = byKey.get(key)
         if (next && !seen.has(key)) {
           seen.add(key)
@@ -58,8 +54,8 @@ function connectedGroups(pixels: SpritePixel[]): SpritePixel[][] {
 
 // The legs: scanning up from the bottom, the rows where the pixels still form two or
 // more separate shapes, before they join the body. Empty when no legs can be told apart.
-function findLegs(sprite: Sprite): SpritePixel[][] {
-  let legs: SpritePixel[][] = []
+function findLegs(sprite: Sprite): Pixel[][] {
+  let legs: Pixel[][] = []
   for (let top = sprite.height - 1; top >= 0; top--) {
     const groups = connectedGroups(sprite.pixels.filter((p) => p.y >= top))
     if (groups.length >= 2) legs = groups
@@ -76,7 +72,7 @@ export function walkFrames(sprite: Sprite): [Sprite, Sprite] {
 
   const legTop = Math.min(...legs.flat().map((p) => p.y))
   const hoovesFrom = legTop + Math.ceil((sprite.height - legTop) / 2)
-  const legIndex = new Map<SpritePixel, number>()
+  const legIndex = new Map<Pixel, number>()
   legs.forEach((leg, i) => leg.forEach((p) => legIndex.set(p, i)))
 
   function frame(phase: 1 | -1): Sprite {
@@ -100,19 +96,12 @@ function mostCommon<T>(items: T[]): T | undefined {
   return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0]
 }
 
-const SIDES = [
-  [1, 0],
-  [-1, 0],
-  [0, 1],
-  [0, -1],
-]
-
 // The eye: the largest blob in the outline's color that sits fully inside the sprite,
-// plus any highlight pixels it surrounds. Returns how to draw it closed: the eye filled
-// with the surrounding skin color, keeping its bottom row as a dark lid line. Null when
-// no eye can be found.
-export function findEye(sprite: Sprite): Map<string, TailwindColor> | null {
-  const byKey = new Map(sprite.pixels.map((p) => [`${p.x},${p.y}`, p]))
+// plus any highlight pixels it surrounds. Returns the pixels to draw it closed: the eye
+// filled with the surrounding skin color, keeping its bottom row as a dark lid line. Null
+// when no eye can be found.
+export function findEye(sprite: Sprite): Pixel[] | null {
+  const byKey = new Map(sprite.pixels.map((p) => [cellKey(p), p]))
   const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < sprite.width && y < sprite.height
 
   // Empty cells reachable from outside the sprite.
@@ -122,14 +111,17 @@ export function findEye(sprite: Sprite): Map<string, TailwindColor> | null {
   for (let y = 0; y < sprite.height; y++) stack.push([-1, y], [sprite.width, y])
   while (stack.length > 0) {
     const [x, y] = stack.pop()!
-    const key = `${x},${y}`
+    const key = cellKey({ x, y })
     if (exterior.has(key) || byKey.has(key)) continue
     if (x < -1 || y < -1 || x > sprite.width || y > sprite.height) continue
     exterior.add(key)
     for (const [dx, dy] of SIDES) stack.push([x + dx, y + dy])
   }
-  const touchesOutside = (p: SpritePixel) =>
-    SIDES.some(([dx, dy]) => exterior.has(`${p.x + dx},${p.y + dy}`) || !inside(p.x + dx, p.y + dy))
+  const touchesOutside = (p: Pixel) =>
+    SIDES.some((side) => {
+      const n = step(p, side)
+      return exterior.has(cellKey(n)) || !inside(n.x, n.y)
+    })
 
   const outlineColor = mostCommon(sprite.pixels.filter(touchesOutside).map((p) => p.color))
   const candidates = connectedGroups(
@@ -138,8 +130,8 @@ export function findEye(sprite: Sprite): Map<string, TailwindColor> | null {
     // Blobs connected to the outline aren't eyes.
     .filter((group) =>
       group.every((p) =>
-        SIDES.every(([dx, dy]) => {
-          const n = byKey.get(`${p.x + dx},${p.y + dy}`)
+        SIDES.every((side) => {
+          const n = byKey.get(cellKey(step(p, side)))
           return !n || n.color !== outlineColor || group.includes(n)
         }),
       ),
@@ -148,33 +140,34 @@ export function findEye(sprite: Sprite): Map<string, TailwindColor> | null {
   const eye = candidates[0]
   if (!eye || eye.length < 2) return null
 
-  const eyeKeys = new Set(eye.map((p) => `${p.x},${p.y}`))
+  const eyeCells: Cell[] = [...eye]
+  const eyeKeys = new Set(eyeCells.map(cellKey))
   // Highlights: pixels whose every neighbour is part of the eye.
   for (const p of sprite.pixels) {
-    if (SIDES.every(([dx, dy]) => eyeKeys.has(`${p.x + dx},${p.y + dy}`)))
-      eyeKeys.add(`${p.x},${p.y}`)
+    if (!eyeKeys.has(cellKey(p)) && SIDES.every((side) => eyeKeys.has(cellKey(step(p, side))))) {
+      eyeCells.push(p)
+      eyeKeys.add(cellKey(p))
+    }
   }
-  const neighbours = [...eyeKeys].flatMap((key) => {
-    const [x, y] = key.split(',').map(Number)
-    return SIDES.map(([dx, dy]) => byKey.get(`${x + dx},${y + dy}`)).filter(
-      (n): n is SpritePixel => !!n && !eyeKeys.has(`${n.x},${n.y}`),
-    )
-  })
+  const neighbours = eyeCells.flatMap((c) =>
+    SIDES.map((side) => byKey.get(cellKey(step(c, side)))).filter(
+      (n): n is Pixel => !!n && !eyeKeys.has(cellKey(n)),
+    ),
+  )
   const skin = mostCommon(neighbours.map((n) => n.color))
   if (!skin || !outlineColor) return null
 
-  const bottom = Math.max(...[...eyeKeys].map((k) => Number(k.split(',')[1])))
-  return new Map(
-    [...eyeKeys].map((key) => [key, Number(key.split(',')[1]) === bottom ? outlineColor : skin]),
-  )
+  const bottom = Math.max(...eyeCells.map((c) => c.y))
+  return eyeCells.map(({ x, y }) => ({ x, y, color: y === bottom ? outlineColor : skin }))
 }
 
 // A frame with the eye closed.
-export function withEyeClosed(sprite: Sprite, closedEye: Map<string, TailwindColor>): Sprite {
+export function withEyeClosed(sprite: Sprite, closedEye: Pixel[]): Sprite {
+  const colors = new Map(closedEye.map((p) => [cellKey(p), p.color]))
   return {
     ...sprite,
     pixels: sprite.pixels.map((p) => {
-      const color = closedEye.get(`${p.x},${p.y}`)
+      const color = colors.get(cellKey(p))
       return color ? { ...p, color } : p
     }),
   }

@@ -1,5 +1,6 @@
 import type { TailwindColor } from './colors'
 import { cellKey, type Cell } from './grid'
+import { findLayer, updateLayerPixels } from './layers'
 import type { Drawing, Pixel } from './types'
 
 // Tools that change pixels.
@@ -17,7 +18,7 @@ export function paintCells(
   tool: PaintTool,
   color: TailwindColor,
 ): Drawing {
-  const layer = drawing.layers.find((l) => l.id === layerId)
+  const layer = findLayer(drawing, layerId)
   if (!layer) return drawing
   const pixels = new Map<string, Pixel>(layer.pixels.map((p) => [cellKey(p), p]))
   let changed = false
@@ -30,11 +31,7 @@ export function paintCells(
       changed = true
     }
   }
-  if (!changed) return drawing
-  return {
-    ...drawing,
-    layers: drawing.layers.map((l) => (l === layer ? { ...l, pixels: [...pixels.values()] } : l)),
-  }
+  return changed ? updateLayerPixels(drawing, layerId, () => [...pixels.values()]) : drawing
 }
 
 // Cells on the straight line from a to b (Bresenham), so fast drags don't leave gaps.

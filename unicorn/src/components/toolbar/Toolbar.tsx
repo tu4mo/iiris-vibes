@@ -4,7 +4,7 @@ import { maneDividerStyle, maneEdgeStyle } from '../mane'
 export function Toolbar({ children }: { children?: ReactNode }) {
   return (
     <aside
-      // No frame of its own: just the rainbow edge separating it from the canvas.
+      // A plain column; the rainbow edge on the right separates it from the palette.
       className="box-content flex min-h-0 w-16 flex-col overflow-y-auto border-r-4 bg-indigo-950"
       style={maneEdgeStyle}
       aria-label="Toolbar"

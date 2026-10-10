@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { Editor } from './components/Editor'
 import { Game } from './components/game/Game'
 import { useDrawing } from './hooks/useDrawing'
@@ -7,11 +7,10 @@ import { useDrawing } from './hooks/useDrawing'
 function App() {
   const drawing = useDrawing()
   const [editing, setEditing] = useState(false)
-  const openEditor = useCallback(() => setEditing(true), [])
 
   return (
     <>
-      <Game drawing={drawing.drawing} paused={editing} onEdit={openEditor} />
+      <Game drawing={drawing.drawing} paused={editing} onEdit={() => setEditing(true)} />
       <Editor {...drawing} open={editing} onClose={() => setEditing(false)} />
     </>
   )

@@ -1,12 +1,13 @@
 import type { TailwindColor } from '../drawing/colors'
+import { outlinedPixels, toShapes, type Shape } from './shape'
 
 // A pixel-art castle, generated from simple shapes. Coordinates: x from the castle's
 // left edge, u = rows above the ground (u = 0 sits directly on the grass).
 
-export const CASTLE_WIDTH = 84
+const CASTLE_WIDTH = 84
 // The doorway the unicorn walks into, as a column range within the castle.
-export const DOOR_LEFT = 26
-export const DOOR_WIDTH = 32
+const DOOR_LEFT = 26
+const DOOR_WIDTH = 32
 const DOOR_HEIGHT = 36
 
 const SIDE_TOWER = { width: 14, height: 52, roof: 12 }
@@ -14,7 +15,8 @@ const KEEP = { left: 14, right: 69, height: 40 }
 const CENTER_TOWER = { left: 34, right: 49, height: 56, roof: 12 }
 
 type Part = 'left' | 'right' | 'center' | 'keep'
-type Shape = { kind: 'stone' | 'roof' | 'pole' | 'flag'; part: Part }
+// What a cell of the castle is made of, and which part it belongs to.
+type Piece = { kind: 'stone' | 'roof' | 'pole' | 'flag'; part: Part }
 
 // Each part of the castle gets its own pastel bricks, roof and flag.
 const PALETTE: Record<
@@ -69,7 +71,7 @@ function flagKind(x: number, u: number, left: number, width: number, top: number
   return null
 }
 
-function shapeAt(x: number, u: number): Shape | null {
+function pieceAt(x: number, u: number): Piece | null {
   const towers: { part: Part; left: number }[] = [
     { part: 'left', left: 0 },
     { part: 'right', left: CASTLE_WIDTH - SIDE_TOWER.width },
@@ -137,12 +139,12 @@ function brickColor(x: number, u: number, part: Part): TailwindColor {
 }
 
 function colorAt(x: number, u: number): TailwindColor | null {
-  const shape = shapeAt(x, u)
-  if (shape === null) return null
-  const colors = PALETTE[shape.part]
-  if (shape.kind === 'pole') return 'slate-500'
-  if (shape.kind === 'flag') return colors.flag
-  if (shape.kind === 'roof') return colors.roof[Math.floor(u / 2) % 2]
+  const piece = pieceAt(x, u)
+  if (piece === null) return null
+  const colors = PALETTE[piece.part]
+  if (piece.kind === 'pole') return 'slate-500'
+  if (piece.kind === 'flag') return colors.flag
+  if (piece.kind === 'roof') return colors.roof[Math.floor(u / 2) % 2]
   if (inDoor(x, u)) return 'indigo-950'
   // A two-cell golden arch around the doorway.
   const nearDoor = (d: number) =>
@@ -156,33 +158,14 @@ function colorAt(x: number, u: number): TailwindColor | null {
   if (nearDoor(1)) return 'amber-300'
   if (nearDoor(2)) return 'amber-400'
   if (inWindow(x, u)) return 'amber-300'
-  return brickColor(x, u, shape.part)
+  return brickColor(x, u, piece.part)
 }
 
-// Every castle pixel, keyed "x,u", with an indigo outline around the whole shape.
-export function castlePixels(): Map<string, TailwindColor> {
-  const pixels = new Map<string, TailwindColor>()
-  const top = CENTER_TOWER.height + CENTER_TOWER.roof + 6
-  for (let u = 0; u < top; u++) {
-    for (let x = 0; x < CASTLE_WIDTH; x++) {
-      const color = colorAt(x, u)
-      if (color) pixels.set(`${x},${u}`, color)
-    }
-  }
-  // Collect the outline first, so new outline cells don't count as part of the shape.
-  const outline: string[] = []
-  for (let u = 0; u <= top; u++) {
-    for (let x = -1; x <= CASTLE_WIDTH; x++) {
-      if (pixels.has(`${x},${u}`)) continue
-      const touches = [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ].some(([dx, du]) => pixels.has(`${x + dx},${u + du}`))
-      if (touches) outline.push(`${x},${u}`)
-    }
-  }
-  for (const key of outline) pixels.set(key, 'indigo-950')
-  return pixels
-}
+const { shapes, left } = toShapes([
+  outlinedPixels(CASTLE_WIDTH, CENTER_TOWER.height + CENTER_TOWER.roof + 6, colorAt),
+])
+
+// The whole castle, outlined.
+export const CASTLE: Shape = shapes[0]
+// The doorway's left column in the outlined shape, which starts at the outline's column.
+export const CASTLE_DOOR_LEFT = DOOR_LEFT - left

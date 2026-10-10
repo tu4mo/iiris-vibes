@@ -35,18 +35,16 @@ export function Editor({ open, onClose, drawing, paint, reset, setHairStyle }: E
 
   const hairStyle = currentHairStyle(drawing)
 
-  // Choosing a color from the palette means drawing with it, even if erasing or picking.
+  // Choosing a color means drawing with it next, whatever tool was active.
   function chooseColor(next: TailwindColor) {
     setColor(next)
     setTool('draw')
   }
 
-  // Take the visible color under the cell, then go back to drawing with it.
+  // Take the visible color under the cell.
   function pickColor(cell: Cell) {
     const picked = colorAt(drawing, cell)
-    if (!picked) return
-    setColor(picked)
-    setTool('draw')
+    if (picked) chooseColor(picked)
   }
 
   return (
