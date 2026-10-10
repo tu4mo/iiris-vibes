@@ -1,0 +1,15 @@
+/* static: emit every theme variable, since pixel colors are looked up at runtime */
+@import 'tailwindcss' theme(static);
+
+:root {
+  color-scheme: light dark;
+}
+
+/* A dark pixel grid behind the whole app, echoing the drawing board. */
+@utility bg-pixel-grid {
+  background-color: var(--color-black);
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.07) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
