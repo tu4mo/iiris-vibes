@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { cssColor, type TailwindColor } from '../../drawing/colors'
 import { cellKey } from '../../drawing/grid'
 import type { Pixel } from '../../drawing/types'
@@ -27,19 +27,32 @@ function PixelDivs({ pixels, cell }: { pixels: Pixel[]; cell: number }) {
 
 type FieldViewProps = { field: Field; cell: number }
 
+// A column as runs: each colored cell on its own, and each stretch of open sky as one run.
+function columnRuns(colors: (TailwindColor | null)[]) {
+  const runs: { color: TailwindColor | null; rows: number }[] = []
+  for (const color of colors) {
+    const last = runs.at(-1)
+    if (color === null && last?.color === null) last.rows++
+    else runs.push({ color, rows: 1 })
+  }
+  return runs
+}
+
 // Every pixel of the field as a div. Rendered once; the camera moves it with a transform.
-// Open-sky cells are transparent so the backdrop and sky show through.
+// Open sky is transparent so the backdrop and sky show through, and each stretch of it is
+// a single div rather than one per cell: most of the field is sky.
 export const FieldView = memo(function FieldView({ field, cell }: FieldViewProps) {
+  const columns = useMemo(() => field.columns.map(columnRuns), [field])
   return (
     <div className="flex">
-      {field.columns.map((colors, x) => (
+      {columns.map((runs, x) => (
         <div key={x} className="flex shrink-0 flex-col" style={{ width: cell }}>
-          {colors.map((color, y) => (
+          {runs.map((run, i) => (
             <div
-              key={y}
+              key={i}
               style={{
-                height: cell,
-                backgroundColor: color ? cssColor(color) : undefined,
+                height: run.rows * cell,
+                backgroundColor: run.color ? cssColor(run.color) : undefined,
               }}
             />
           ))}
