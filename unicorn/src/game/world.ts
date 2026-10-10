@@ -36,22 +36,53 @@ function groundHeight(seed: number, column: number) {
 
 const FLOWERS: TailwindColor[] = ['rose-400', 'amber-300', 'violet-400', 'pink-300', 'white']
 
-// Clouds are seeded per 24-column chunk; a cloud can spill into neighbouring chunks.
-const CLOUD_CHUNK = 24
+// Clouds: one chance per chunk of columns, so they're spread out but not evenly.
+const CLOUD_CHUNK = 48
 
-function isCloud(seed: number, column: number, row: number) {
-  const chunk = Math.floor(column / CLOUD_CHUNK)
-  for (let c = chunk - 1; c <= chunk + 1; c++) {
-    if (hash(seed, c, 10) > 0.6) continue
-    const cx = c * CLOUD_CHUNK + hash(seed, c, 11) * CLOUD_CHUNK
-    const cy = 6 + hash(seed, c, 12) * 14
-    const halfWidth = 4 + hash(seed, c, 13) * 5
-    const halfHeight = 1.5 + hash(seed, c, 14) * 1.5
-    const dx = (column + 0.5 - cx) / halfWidth
-    const dy = (row + 0.5 - cy) / halfHeight
-    if (dx * dx + dy * dy <= 1) return true
+// A cloud is a row of round puffs, biggest in the middle, cut off flat at the bottom.
+type Puff = { x: number; y: number; radius: number }
+type Cloud = { bottom: number; puffs: Puff[] }
+
+function generateClouds(seed: number, width: number): Cloud[] {
+  const clouds: Cloud[] = []
+  for (let c = 0; c * CLOUD_CHUNK < width; c++) {
+    if (hash(seed, c, 10) > 0.65) continue
+    const bottom = 25 + Math.floor(hash(seed, c, 11) * 14)
+    const count = 4 + Math.floor(hash(seed, c, 12) * 3)
+    const puffs: Puff[] = []
+    let x = (c + 0.2 + hash(seed, c, 13) * 0.3) * CLOUD_CHUNK
+    for (let i = 0; i < count; i++) {
+      // 0 at the ends, 1 in the middle.
+      const middle = 1 - Math.abs((2 * i) / (count - 1) - 1)
+      const radius = 3.5 + middle * 4 + hash(seed, c * 8 + i, 14) * 2
+      if (i > 0) x += (puffs[i - 1].radius + radius) * 0.6
+      // The middle puffs ride higher, so the cloud piles up into a mound.
+      const lift = middle * 4 + hash(seed, c * 8 + i, 15) * 2
+      puffs.push({ x, y: bottom - radius * 0.5 - lift, radius })
+    }
+    clouds.push({ bottom, puffs })
   }
-  return false
+  return clouds
+}
+
+const inPuff = (p: Puff, column: number, row: number) =>
+  Math.hypot(column + 0.5 - p.x, row + 0.5 - p.y) <= p.radius
+
+// A cloud cell's color. Lower puffs overlap higher ones, and each puff is lit from the top
+// left: white there, with a crescent of shade on its lower right. The flat bottom is shaded too.
+function cloudColor(clouds: Cloud[], column: number, row: number): TailwindColor | null {
+  for (const cloud of clouds) {
+    if (row >= cloud.bottom) continue
+    const front = cloud.puffs.filter((p) => inPuff(p, column, row)).sort((a, b) => b.y - a.y)[0]
+    if (!front) continue
+    if (row === cloud.bottom - 1) return 'blue-200'
+    if (row === cloud.bottom - 2) return 'sky-200'
+    // The lit part is the puff's circle nudged up and left; the crescent outside it is shade.
+    const lit = { ...front, x: front.x - front.radius * 0.2, y: front.y - front.radius * 0.3 }
+    if (!inPuff(lit, column, row)) return 'sky-100'
+    return 'white'
+  }
+  return null
 }
 
 // The color of a field cell, or null for open sky (the layers behind show through).
@@ -84,7 +115,6 @@ function cellColor(
   return null
 }
 
-// Skies as pixel-art bands, top to bottom, with a checkerboard dither where two bands meet.
 // A clear day sky from deep blue at the top to pale blue at the horizon.
 export const DAY_SKY: TailwindColor[] = [
   'blue-500',
@@ -109,18 +139,17 @@ export const DUSK_SKY: TailwindColor[] = [
   'amber-300',
 ]
 
-export type SkyRow = { color: TailwindColor; dither?: TailwindColor }
+// A sky band, from row `top` down to (not including) row `bottom`.
+export type SkyBand = { color: TailwindColor; top: number; bottom: number }
 
-// The sky row by row. The last row of each band is dithered with the next band's color.
-export function skyRows(rows: number, sky: TailwindColor[]): SkyRow[] {
+// The sky's bands, top to bottom. They're equal heights, and the last one takes up the rest.
+export function skyBands(rows: number, sky: TailwindColor[]): SkyBand[] {
   const bandHeight = Math.max(2, Math.floor((rows * 0.85) / sky.length))
-  return Array.from({ length: rows }, (_, row) => {
-    const band = Math.min(sky.length - 1, Math.floor(row / bandHeight))
-    const lastRowOfBand = row % bandHeight === bandHeight - 1
-    return lastRowOfBand && band < sky.length - 1
-      ? { color: sky[band], dither: sky[band + 1] }
-      : { color: sky[band] }
-  })
+  return sky.map((color, i) => ({
+    color,
+    top: i * bandHeight,
+    bottom: i < sky.length - 1 ? (i + 1) * bandHeight : Math.max(rows, i * bandHeight),
+  }))
 }
 
 // The backdrop behind the field: clouds and a big rainbow, as pixels. It scrolls slower
@@ -138,6 +167,7 @@ const RAINBOW_BAND = 3
 
 export function generateBackdrop(seed: number, width: number, rows: number): Pixel[] {
   const pixels: Pixel[] = []
+  const clouds = generateClouds(seed, width)
   // The arc's center sits below the horizon, so its ends disappear behind the hills.
   const center = { x: width / 2, y: rows - 14 }
   const outer = Math.min(rows - 24, width / 2 - 4)
@@ -146,7 +176,10 @@ export function generateBackdrop(seed: number, width: number, rows: number): Pix
       const distance = Math.hypot(x + 0.5 - center.x, y + 0.5 - center.y)
       const band = Math.floor((outer - distance) / RAINBOW_BAND)
       if (band >= 0 && band < RAINBOW.length) pixels.push({ x, y, color: RAINBOW[band] })
-      else if (isCloud(seed, x, y)) pixels.push({ x, y, color: 'white' })
+      else {
+        const color = cloudColor(clouds, x, y)
+        if (color) pixels.push({ x, y, color })
+      }
     }
   }
   return pixels

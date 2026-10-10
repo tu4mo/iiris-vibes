@@ -5,7 +5,7 @@ import type { Pixel } from '../../drawing/types'
 import { SNAIL_FRAMES, SNAIL_SQUISHED, SQUISH_SPREAD } from '../../game/snail'
 import type { Shape } from '../../game/shape'
 import type { Sprite } from '../../game/sprite'
-import { skyRows, type Field } from '../../game/world'
+import { skyBands, type Field } from '../../game/world'
 import { PixelRects } from '../PixelArt'
 
 // Pixels as absolutely positioned divs, `cell` px each, inside a positioned parent.
@@ -64,25 +64,20 @@ export const FieldView = memo(function FieldView({ field, cell }: FieldViewProps
 
 type SkyViewProps = { sky: TailwindColor[]; rows: number; cell: number; opacity?: number }
 
-// The sky never moves: its bands are horizontal, so each row is a single div, and dithered
-// rows use a checker pattern of the two band colors.
+// The sky never moves, so it's a single div: one vertical gradient with a hard stop at
+// each band's edge.
 export const SkyView = memo(function SkyView({ sky, rows, cell, opacity }: SkyViewProps) {
+  const background = useMemo(() => {
+    const stops = skyBands(rows, sky).map(
+      (band) => `${cssColor(band.color)} ${band.top * cell}px ${band.bottom * cell}px`,
+    )
+    return `linear-gradient(${stops.join(', ')})`
+  }, [sky, rows, cell])
   return (
-    <div className="absolute inset-x-0 bottom-0" style={{ opacity }}>
-      {skyRows(rows, sky).map((row, y) => (
-        <div
-          key={y}
-          style={{
-            height: cell,
-            backgroundColor: cssColor(row.color),
-            backgroundImage: row.dither
-              ? `repeating-linear-gradient(to right, ${cssColor(row.dither)} 0 ${cell}px, transparent ${cell}px ${cell * 2}px)`
-              : undefined,
-            backgroundPosition: y % 2 === 0 ? '0 0' : `${cell}px 0`,
-          }}
-        />
-      ))}
-    </div>
+    <div
+      className="absolute inset-x-0 bottom-0"
+      style={{ height: rows * cell, background, opacity }}
+    />
   )
 })
 
