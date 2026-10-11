@@ -1,3 +1,4 @@
+import { CAVE_SONG } from '../../audio/songs'
 import type { TailwindColor } from '../../drawing/colors'
 import type { Field, Pickup } from '../field'
 import { pickupShape, pickupStyles } from '../pickup'
@@ -184,5 +185,6 @@ export const CAVE: Level = {
       ceiling: 'black',
     },
   },
+  music: CAVE_SONG,
   hint: 'Follow the passage over the rocks, collect the diamonds, and find the way out.',
 }

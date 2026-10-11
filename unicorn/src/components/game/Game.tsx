@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Drawing } from '../../drawing/types'
 import { LEVELS } from '../../game/levels'
 import { LevelRun } from './LevelRun'
+import { useMusic } from './useMusic'
 
 type GameProps = {
   drawing: Drawing
@@ -27,6 +28,8 @@ export function Game(props: GameProps) {
     dress: null,
   })
 
+  const { muted, toggleMuted } = useMusic(LEVELS[level].music)
+
   function handleExit(wearing: number | null) {
     setProgress((p) =>
       p.level < LEVELS.length - 1
@@ -43,6 +46,8 @@ export function Game(props: GameProps) {
       dress={dress}
       onExit={handleExit}
       fadeIn={run > 0}
+      muted={muted}
+      onToggleMuted={toggleMuted}
     />
   )
 }

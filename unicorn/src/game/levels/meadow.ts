@@ -1,3 +1,4 @@
+import { MEADOW_SONG } from '../../audio/songs'
 import type { TailwindColor } from '../../drawing/colors'
 import type { Pixel } from '../../drawing/types'
 import { CASTLE, CASTLE_DOOR_LEFT } from '../castle'
@@ -203,5 +204,6 @@ export const MEADOW: Level = {
     shadeAtExit: 0.25,
     backdrop: generateBackdrop,
   },
+  music: MEADOW_SONG,
   hint: 'Walk to the castle with ← and →, and jump over snails with Space.',
 }

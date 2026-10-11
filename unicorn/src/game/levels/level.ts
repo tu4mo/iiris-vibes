@@ -1,3 +1,4 @@
+import type { Song } from '../../audio/song'
 import type { Pixel } from '../../drawing/types'
 import type { Field } from '../field'
 import type { Sky } from '../sky'
@@ -28,6 +29,8 @@ export type Level = {
   generate: (seed: number) => Field
   // What's behind the field.
   scenery: Outdoors | Indoors
+  // Played on a loop while the level is on.
+  music: Song
   // How to play, shown at the bottom of the screen.
   hint: string
 }

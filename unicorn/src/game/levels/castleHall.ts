@@ -1,3 +1,4 @@
+import { CASTLE_SONG } from '../../audio/songs'
 import type { TailwindColor } from '../../drawing/colors'
 import { DRESS_STYLES, DRESS_WIDTH } from '../dress'
 import { stamp, type Field, type Pickup } from '../field'
@@ -158,5 +159,6 @@ export const CASTLE_HALL: Level = {
       ceiling: 'indigo-950',
     },
   },
+  music: CASTLE_SONG,
   hint: 'Jump with Space to grab the dresses, then find the secret passage.',
 }

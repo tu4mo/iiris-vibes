@@ -5,7 +5,7 @@ import { DRESS_STYLES, wearDress } from '../../game/dress'
 import type { Level } from '../../game/levels'
 import { pickupShape } from '../../game/pickup'
 import { findEye, spriteFromDrawing, walkFrames, withEyeClosed } from '../../game/sprite'
-import { PencilIcon } from '../icons'
+import { MusicOffIcon, MusicOnIcon, PencilIcon } from '../icons'
 import { START_X, usePlayLoop } from './usePlayLoop'
 import { maneBorderStyle } from '../mane'
 import {
@@ -35,11 +35,23 @@ type LevelRunProps = {
   onExit: (dress: number | null) => void
   // Fade in from black, as if coming through a door.
   fadeIn: boolean
+  muted: boolean
+  onToggleMuted: () => void
 }
 
 // One play of a level, on a field generated for it. Remounted (with a new key) to play
 // the level again or move on to another.
-export function LevelRun({ level, drawing, paused, onEdit, dress, onExit, fadeIn }: LevelRunProps) {
+export function LevelRun({
+  level,
+  drawing,
+  paused,
+  onEdit,
+  dress,
+  onExit,
+  fadeIn,
+  muted,
+  onToggleMuted,
+}: LevelRunProps) {
   const containerRef = useRef<HTMLElement>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
   // Generated once per run, with a fresh random seed.
@@ -212,17 +224,31 @@ export function LevelRun({ level, drawing, paused, onEdit, dress, onExit, fadeIn
           {diamondCount} / {diamonds.length}
         </div>
       )}
-      <button
-        type="button"
-        aria-label="Edit unicorn"
-        title="Edit unicorn"
-        className="absolute top-3 left-3 rounded-2xl border-4 border-transparent p-2 transition-transform hover:-rotate-3 hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
-        style={maneBorderStyle}
-        onClick={onEdit}
-      >
-        {/* A pencil stands in if everything has been erased. */}
-        {sprite.width > 0 ? <SpriteIcon sprite={poses.standing} /> : <PencilIcon />}
-      </button>
+      <div className="absolute top-3 left-3 flex items-start gap-3">
+        <button
+          type="button"
+          aria-label="Edit unicorn"
+          title="Edit unicorn"
+          className="rounded-2xl border-4 border-transparent p-2 transition-transform hover:-rotate-3 hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
+          style={maneBorderStyle}
+          onClick={onEdit}
+        >
+          {/* A pencil stands in if everything has been erased. */}
+          {sprite.width > 0 ? <SpriteIcon sprite={poses.standing} /> : <PencilIcon />}
+        </button>
+        <button
+          type="button"
+          aria-label="Music"
+          aria-pressed={!muted}
+          title={muted ? 'Turn music on' : 'Turn music off'}
+          className="rounded-2xl bg-indigo-950/85 p-3 text-sky-100 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
+          // Clicking would otherwise leave it focused, and Space (jump) would press it again.
+          onPointerDown={(event) => event.preventDefault()}
+          onClick={onToggleMuted}
+        >
+          {muted ? <MusicOffIcon /> : <MusicOnIcon />}
+        </button>
+      </div>
       {!finished && (
         <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-indigo-950/85 px-4 py-2 text-sky-100">
           {level.hint}

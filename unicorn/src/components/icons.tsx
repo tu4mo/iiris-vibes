@@ -150,3 +150,41 @@ export function ResetIcon() {
     </Icon>
   )
 }
+
+const SPEAKER =
+  'M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z'
+
+// A speaker filled with the mane's warm colors, with sound waves coming out.
+export function MusicOnIcon() {
+  const id = useGradientId()
+  return (
+    <Icon>
+      <defs>
+        <Gradient
+          id={id}
+          from={[6, 4]}
+          to={[6, 20]}
+          stops={[
+            { offset: 0.2, color: 'rose-400' },
+            { offset: 0.5, color: 'amber-300' },
+            { offset: 0.8, color: 'green-300' },
+          ]}
+        />
+      </defs>
+      <path fill={`url(#${id})`} d={SPEAKER} />
+      <path d="M16 9a5 5 0 0 1 0 6" />
+      <path d="M19.364 18.364a9 9 0 0 0 0-12.728" />
+    </Icon>
+  )
+}
+
+// The speaker crossed out.
+export function MusicOffIcon() {
+  return (
+    <Icon>
+      <path d={SPEAKER} />
+      <line x1="22" x2="16" y1="9" y2="15" />
+      <line x1="16" x2="22" y1="9" y2="15" />
+    </Icon>
+  )
+}
