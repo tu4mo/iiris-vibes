@@ -101,7 +101,7 @@ function cellColor(
 }
 
 // A clear day sky from deep blue at the top to pale blue at the horizon.
-const DAY_SKY: Sky = [
+export const DAY_SKY: Sky = [
   'blue-500',
   'blue-400',
   'blue-300',
@@ -125,7 +125,7 @@ const DUSK_SKY: Sky = [
 ]
 
 // The backdrop behind the field: clouds and a big rainbow, as pixels.
-const RAINBOW: TailwindColor[] = [
+export const RAINBOW: TailwindColor[] = [
   'red-400',
   'orange-400',
   'amber-300',
@@ -188,7 +188,7 @@ function generateField(seed: number): Field {
     columns,
     exit: castleLeft + CASTLE_DOOR_LEFT,
     snails,
-    dresses: [],
+    pickups: [],
   }
 }
 

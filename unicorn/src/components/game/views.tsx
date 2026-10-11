@@ -2,13 +2,13 @@ import { memo, useId, useMemo } from 'react'
 import { cssColor, type TailwindColor } from '../../drawing/colors'
 import { cellKey } from '../../drawing/grid'
 import type { Pixel } from '../../drawing/types'
-import { DRESS_HEIGHT, DRESS_SHAPES, dressBottom } from '../../game/dress'
 import { SNAIL_FRAMES, SNAIL_SQUISHED, SQUISH_SPREAD } from '../../game/snail'
 import type { Shape } from '../../game/shape'
 import type { Sprite } from '../../game/sprite'
 import type { Field } from '../../game/field'
+import { pickupBottom, pickupShape } from '../../game/pickup'
 import { skyBands, type Sky } from '../../game/sky'
-import { BRICK_HEIGHT, wallBricks, type Wall } from '../../game/wall'
+import { wallBase, wallBlocks, type Wall } from '../../game/wall'
 import { PixelRects } from '../PixelArt'
 
 // Pixels as absolutely positioned divs, `cell` px each, inside a positioned parent.
@@ -108,11 +108,11 @@ export const BackdropView = memo(function BackdropView({
 
 type WallViewProps = { wall: Wall; seed: number; width: number; rows: number; cell: number }
 
-// An indoor wall behind the field, as one SVG scaled up to the cell size: mortar behind
-// the bricks, and a shadow fading down from the ceiling.
+// An indoor wall behind the field, as one SVG scaled up to the cell size: its blocks over
+// the base color, and a shadow fading down from the ceiling.
 export const WallView = memo(function WallView({ wall, seed, width, rows, cell }: WallViewProps) {
   const shadowId = useId()
-  const bricks = useMemo(() => wallBricks(seed, wall, width, rows), [seed, wall, width, rows])
+  const blocks = useMemo(() => wallBlocks(seed, wall, width, rows), [seed, wall, width, rows])
   return (
     <svg
       className="absolute top-0 left-0"
@@ -129,45 +129,40 @@ export const WallView = memo(function WallView({ wall, seed, width, rows, cell }
           <stop offset="0.5" stopColor={cssColor(wall.ceiling)} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <rect width={width} height={rows} fill={cssColor(wall.mortar)} />
-      {bricks.map((b) => (
-        <rect
-          key={`${b.x},${b.y}`}
-          x={b.x}
-          y={b.y}
-          width={b.width}
-          height={BRICK_HEIGHT}
-          fill={cssColor(b.color)}
-        />
+      <rect width={width} height={rows} fill={cssColor(wallBase(wall))} />
+      {blocks.map((b, i) => (
+        <rect key={i} x={b.x} y={b.y} width={b.width} height={b.height} fill={cssColor(b.color)} />
       ))}
       <rect width={width} height={rows} fill={`url(#${CSS.escape(shadowId)})`} />
     </svg>
   )
 })
 
-type DressesProps = { field: Field; cell: number; spriteHeight: number; collected: number[] }
+type PickupsProps = { field: Field; cell: number; spriteHeight: number; collected: number[] }
 
-// The dresses still hanging on the wall, a little above the unicorn's head.
-export const Dresses = memo(function Dresses({
+// The dresses and diamonds not collected yet.
+export const Pickups = memo(function Pickups({
   field,
   cell,
   spriteHeight,
   collected,
-}: DressesProps) {
-  return field.dresses.map((dress, i) =>
-    collected.includes(i) ? null : (
+}: PickupsProps) {
+  return field.pickups.map((pickup, i) => {
+    if (collected.includes(i)) return null
+    const shape = pickupShape(pickup)
+    return (
       <div
         key={i}
         className="absolute"
         style={{
-          left: dress.left * cell,
-          top: (field.rows - dressBottom(dress, spriteHeight) - DRESS_HEIGHT) * cell,
+          left: pickup.left * cell,
+          top: (field.rows - pickupBottom(pickup, spriteHeight) - shape.height) * cell,
         }}
       >
-        <PixelDivs pixels={DRESS_SHAPES[dress.style].pixels} cell={cell} />
+        <PixelDivs pixels={shape.pixels} cell={cell} />
       </div>
-    ),
-  )
+    )
+  })
 })
 
 type SnailProps = { shape: Shape; left: number; ground: number; rows: number; cell: number }
@@ -223,7 +218,7 @@ export const Unicorn = memo(function Unicorn({ sprite, cell, facing }: UnicornPr
 })
 
 // A shape drawn small as an SVG: the unicorn on the button that opens the editor, and
-// the dresses picked up so far.
+// the pickups in the corner.
 export function SpriteIcon({ sprite, className = 'h-12' }: { sprite: Sprite; className?: string }) {
   return (
     <svg

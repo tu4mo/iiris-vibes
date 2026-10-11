@@ -10,14 +10,18 @@ import { SNAIL_HEIGHT, SNAIL_WIDTH } from './snail'
 // the shell's top, from the bottom.
 export type FieldSnail = { left: number; right: number; ground: number; top: number }
 
-// A dress hanging on the wall, to collect by jumping into it: column range, the height of
-// the floor below it, how far above the unicorn's head it hangs (see dressBottom), and
-// which of DRESS_STYLES it is.
-export type FieldDress = {
+// Something to collect by touching it: a dress hanging on a wall, or a diamond. Column
+// range, the height of the ground below it, how high it floats (see pickupBottom), and
+// which of its kind's styles it is.
+export type Pickup = {
+  kind: 'dress' | 'diamond'
   left: number
   right: number
   ground: number
+  // Cells above the ground, or above the unicorn's head when `overHead` is set, so it
+  // takes a jump to reach however tall the unicorn is drawn.
   lift: number
+  overHead: boolean
   style: number
 }
 
@@ -32,7 +36,8 @@ export type Field = {
   exit: number
   // Snails move, so they're drawn separately from `columns`.
   snails: FieldSnail[]
-  dresses: FieldDress[]
+  // Drawn separately too, since they disappear when collected.
+  pickups: Pickup[]
 }
 
 // Snail positions from `from` to `to`, spaced a random distance apart.

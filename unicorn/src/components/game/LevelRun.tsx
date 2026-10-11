@@ -1,15 +1,16 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { cssColor } from '../../drawing/colors'
 import type { Drawing } from '../../drawing/types'
-import { DRESS_SHAPES, DRESS_STYLES, wearDress } from '../../game/dress'
+import { DRESS_STYLES, wearDress } from '../../game/dress'
 import type { Level } from '../../game/levels'
+import { pickupShape } from '../../game/pickup'
 import { findEye, spriteFromDrawing, walkFrames, withEyeClosed } from '../../game/sprite'
 import { PencilIcon } from '../icons'
 import { START_X, usePlayLoop } from './usePlayLoop'
 import { maneBorderStyle } from '../mane'
 import {
   BackdropView,
-  Dresses,
+  Pickups,
   FieldView,
   Snails,
   SkyView,
@@ -28,15 +29,17 @@ type LevelRunProps = {
   // While true (the editor is open) the game ignores the keyboard and stands still.
   paused: boolean
   onEdit: () => void
-  // Called once the unicorn reaches the field's exit.
-  onExit: () => void
+  // The dress style the unicorn comes into the level wearing, if any.
+  dress: number | null
+  // Called once the unicorn reaches the field's exit, with the dress it's wearing then.
+  onExit: (dress: number | null) => void
   // Fade in from black, as if coming through a door.
   fadeIn: boolean
 }
 
 // One play of a level, on a field generated for it. Remounted (with a new key) to play
 // the level again or move on to another.
-export function LevelRun({ level, drawing, paused, onEdit, onExit, fadeIn }: LevelRunProps) {
+export function LevelRun({ level, drawing, paused, onEdit, dress, onExit, fadeIn }: LevelRunProps) {
   const containerRef = useRef<HTMLElement>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
   // Generated once per run, with a fresh random seed.
@@ -50,8 +53,9 @@ export function LevelRun({ level, drawing, paused, onEdit, onExit, fadeIn }: Lev
     { field, sprite, steps, paused },
   )
 
-  // The unicorn wears the dress it picked up last.
-  const wornStyle = collected.length > 0 ? field.dresses[collected.at(-1)!].style : null
+  // The unicorn wears the dress it picked up last, or the one it came in wearing.
+  const wornStyle =
+    collected.map((i) => field.pickups[i]).findLast((p) => p.kind === 'dress')?.style ?? dress
   const looks = useMemo(() => {
     const worn = wornStyle === null ? sprite : wearDress(sprite, DRESS_STYLES[wornStyle])
     const wornSteps = wornStyle === null ? steps : walkFrames(worn)
@@ -64,7 +68,7 @@ export function LevelRun({ level, drawing, paused, onEdit, onExit, fadeIn }: Lev
     return { standing: worn, steps: wornSteps, blinking }
   }, [sprite, steps, wornStyle])
 
-  const handleExit = useEffectEvent(onExit)
+  const handleExit = useEffectEvent(() => onExit(wornStyle))
   useEffect(() => {
     if (finished) handleExit()
   }, [finished])
@@ -114,6 +118,12 @@ export function LevelRun({ level, drawing, paused, onEdit, onExit, fadeIn }: Lev
       ? `color-mix(in oklch, ${cssColor(outdoors.sky[0])}, ${cssColor(outdoors.skyAtExit[0])} ${progress * 100}%)`
       : cssColor(outdoors.sky[0])
 
+  // What's collected so far, for the tally in the corner.
+  const indexed = field.pickups.map((pickup, i) => ({ pickup, i }))
+  const dresses = indexed.filter(({ pickup }) => pickup.kind === 'dress')
+  const diamonds = indexed.filter(({ pickup }) => pickup.kind === 'diamond')
+  const diamondCount = diamonds.filter(({ i }) => collected.includes(i)).length
+
   const poses = blink && looks.blinking ? looks.blinking : looks
   const shown = step === null ? poses.standing : poses.steps[step]
   // Bob up a pixel on the second step.
@@ -156,7 +166,7 @@ export function LevelRun({ level, drawing, paused, onEdit, onExit, fadeIn }: Lev
           )}
           <FieldView field={field} cell={cell} />
           <Snails field={field} cell={cell} tick={hornTick} squished={squished} />
-          <Dresses field={field} cell={cell} spriteHeight={sprite.height} collected={collected} />
+          <Pickups field={field} cell={cell} spriteHeight={sprite.height} collected={collected} />
           {sprite.width > 0 && !finished && (
             <div className="absolute" style={{ left: x * cell, top: unicornY * cell }}>
               <Unicorn sprite={shown} cell={cell} facing={facing} />
@@ -179,17 +189,27 @@ export function LevelRun({ level, drawing, paused, onEdit, onExit, fadeIn }: Lev
           style={{ opacity: progress * outdoors.shadeAtExit }}
         />
       )}
-      {field.dresses.length > 0 && (
+      {dresses.length > 0 && (
         <div
           className="absolute top-3 right-3 flex gap-2 rounded-2xl bg-indigo-950/85 p-3"
           role="status"
-          aria-label={`Dresses: ${collected.length} of ${field.dresses.length}`}
+          aria-label={`Dresses: ${dresses.filter(({ i }) => collected.includes(i)).length} of ${dresses.length}`}
         >
-          {field.dresses.map((dress, i) => (
+          {dresses.map(({ pickup, i }) => (
             <div key={i} className={collected.includes(i) ? '' : 'opacity-40 grayscale'}>
-              <SpriteIcon sprite={DRESS_SHAPES[dress.style]} className="h-8" />
+              <SpriteIcon sprite={pickupShape(pickup)} className="h-8" />
             </div>
           ))}
+        </div>
+      )}
+      {diamonds.length > 0 && (
+        <div
+          className="absolute top-3 right-3 flex items-center gap-3 rounded-2xl bg-indigo-950/85 px-4 py-3 text-lg font-semibold text-white tabular-nums"
+          role="status"
+          aria-label={`Diamonds: ${diamondCount} of ${diamonds.length}`}
+        >
+          <SpriteIcon sprite={pickupShape(diamonds[0].pickup)} className="h-6" />
+          {diamondCount} / {diamonds.length}
         </div>
       )}
       <button

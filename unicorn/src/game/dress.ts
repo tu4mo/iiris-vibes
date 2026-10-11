@@ -80,12 +80,6 @@ export const DRESS_SHAPES: Shape[] = shapes
 export const DRESS_WIDTH = shapes[0].width
 export const DRESS_HEIGHT = shapes[0].height
 
-// How high a dress's hem hangs, in cells from the bottom. Dresses hang `lift` cells above
-// the unicorn's head, so it has to jump to reach them however tall it's drawn.
-export function dressBottom(dress: { ground: number; lift: number }, spriteHeight: number) {
-  return dress.ground + spriteHeight + dress.lift
-}
-
 // The part of the unicorn a dress covers: the body just above the legs, down over the top
 // of the legs like a skirt. It's the connected patch (not crossing the outline) with the
 // most of the body's color in that band, so the mane and tail stay as they are.

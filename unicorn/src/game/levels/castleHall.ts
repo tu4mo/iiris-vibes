@@ -1,13 +1,13 @@
 import type { TailwindColor } from '../../drawing/colors'
 import { DRESS_STYLES, DRESS_WIDTH } from '../dress'
-import { stamp, type Field, type FieldDress } from '../field'
+import { stamp, type Field, type Pickup } from '../field'
 import { hash } from '../random'
 import { outlinedPixels, toShapes, type Shape } from '../shape'
 import type { Level } from './level'
 
 // The second level, inside the castle: a long hall with dresses hanging on its walls to
 // jump for, tall night windows and torches between them, and a black secret passage at
-// the far end that ends the game.
+// the far end leading on to the cave.
 
 const WIDTH = 420
 const ROWS = 96
@@ -21,7 +21,7 @@ const DRESS_LIFT = { min: 3, max: 9 }
 
 // The passage is near the right end, leaving room for a wide unicorn to walk into it.
 const PASSAGE_LEFT = WIDTH - 92
-// Walking this far into the passage ends the game.
+// Walking this far into the passage moves on to the cave.
 const PASSAGE_ENTRY = 6
 
 // A checkered floor with a golden edge along the top.
@@ -105,13 +105,21 @@ function generateField(seed: number): Field {
   )
 
   // Dresses up to a little before the passage, each style in turn from a random start.
-  const dresses: FieldDress[] = []
+  const dresses: Pickup[] = []
   const firstStyle = Math.floor(hash(seed, 0, 40) * DRESS_STYLES.length)
   let left = FIRST_DRESS
   for (let i = 0; left + DRESS_WIDTH < PASSAGE_LEFT - 24; i++) {
     const lift = DRESS_LIFT.min + Math.floor(hash(seed, i, 41) * (DRESS_LIFT.max - DRESS_LIFT.min))
     const style = (firstStyle + i) % DRESS_STYLES.length
-    dresses.push({ left, right: left + DRESS_WIDTH, ground: FLOOR, lift, style })
+    dresses.push({
+      kind: 'dress',
+      left,
+      right: left + DRESS_WIDTH,
+      ground: FLOOR,
+      lift,
+      overHead: true,
+      style,
+    })
     left += DRESS_GAP.min + Math.floor(hash(seed, i, 42) * (DRESS_GAP.max - DRESS_GAP.min))
   }
 
@@ -133,7 +141,7 @@ function generateField(seed: number): Field {
     columns,
     exit: PASSAGE_LEFT + PASSAGE_ENTRY,
     snails: [],
-    dresses,
+    pickups: dresses,
   }
 }
 
@@ -143,7 +151,12 @@ export const CASTLE_HALL: Level = {
   generate: generateField,
   scenery: {
     kind: 'indoors',
-    wall: { bricks: ['pink-100', 'pink-200'], mortar: 'pink-300', ceiling: 'indigo-950' },
+    wall: {
+      kind: 'bricks',
+      bricks: ['pink-100', 'pink-200'],
+      mortar: 'pink-300',
+      ceiling: 'indigo-950',
+    },
   },
   hint: 'Jump with Space to grab the dresses, then find the secret passage.',
 }

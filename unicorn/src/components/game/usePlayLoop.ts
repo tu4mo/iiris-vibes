@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { DRESS_HEIGHT, dressBottom } from '../../game/dress'
 import type { Field, FieldSnail } from '../../game/field'
+import { pickupBottom, pickupShape } from '../../game/pickup'
 import type { Sprite } from '../../game/sprite'
 
 // Walking speed in cells per second.
@@ -31,7 +31,7 @@ type PlayLoopOptions = {
 }
 
 // Plays one level: reads the keyboard, runs walking, jumping, snail collisions and picking
-// up dresses, and
+// things up, and
 // publishes whole-cell changes to React, a few times a second while walking.
 export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
   const maxX = Math.max(0, field.width - sprite.width)
@@ -46,7 +46,7 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
   const [hornTick, setHornTick] = useState(0)
   // Indexes of the snails that are squished right now.
   const [squished, setSquished] = useState<number[]>([])
-  // Indexes of the dresses picked up so far, in the order they were picked up.
+  // Indexes of the pickups collected so far, in the order they were collected.
   const [collected, setCollected] = useState<number[]>([])
   // Set once the unicorn reaches the field's exit; the level is over.
   const [finished, setFinished] = useState(false)
@@ -62,7 +62,7 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
     position: START_X,
     facing: 1,
   })
-  // Also kept across loop restarts, so a dress isn't picked up twice.
+  // Also kept across loop restarts, so nothing is picked up twice.
   const collectedRef = useRef<number[]>([])
 
   useEffect(() => {
@@ -193,13 +193,14 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
         altitude = floor
       }
 
-      // Pick up any dress the unicorn's body touches.
+      // Pick up anything the unicorn's body touches.
       const left = Math.floor(position)
-      const touched = field.dresses.flatMap((dress, i) => {
+      const touched = field.pickups.flatMap((pickup, i) => {
         if (collectedRef.current.includes(i)) return []
-        const bottom = dressBottom(dress, sprite.height)
-        const across = left < dress.right && left + sprite.width > dress.left
-        const level = altitude + sprite.height > bottom && altitude < bottom + DRESS_HEIGHT
+        const bottom = pickupBottom(pickup, sprite.height)
+        const across = left < pickup.right && left + sprite.width > pickup.left
+        const level =
+          altitude + sprite.height > bottom && altitude < bottom + pickupShape(pickup).height
         return across && level && sprite.width > 0 ? [i] : []
       })
       if (touched.length > 0) {
