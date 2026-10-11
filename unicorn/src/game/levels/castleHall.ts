@@ -1,10 +1,11 @@
 import { CASTLE_SONG } from '../../audio/songs'
 import type { TailwindColor } from '../../drawing/colors'
-import { pixelArt } from '../../drawing/pixelArt'
 import { DRESS_STYLES, DRESS_WIDTH } from '../sprites/dress'
+import { PASSAGE } from '../sprites/passage'
+import { TORCH } from '../sprites/torch'
+import { WINDOW } from '../sprites/window'
 import { fieldColumns, stamp, type Field, type Pickup } from '../field'
 import { hash, spread } from '../random'
-import { archDepth, outlinedShape, type Shape } from '../shape'
 import type { Level } from './level'
 
 // The second level, inside the castle: a long hall with dresses hanging on its walls to
@@ -36,66 +37,6 @@ function floorColor(column: number, row: number): TailwindColor | null {
     : 'violet-400'
 }
 
-// Shapes are built with u = rows up from their base, like the castle and snail.
-
-// A tall arched window onto the night: a stone frame, a cross of leading, and stars.
-const WINDOW_WIDTH = 13
-const WINDOW_HEIGHT = 30
-
-function windowShape(seed: number): Shape {
-  return outlinedShape(WINDOW_WIDTH, WINDOW_HEIGHT, (x, u) => {
-    const depth = archDepth(WINDOW_WIDTH, WINDOW_HEIGHT, x, u)
-    if (depth <= 0) return null
-    if (depth <= 1 || u === 0) return 'stone-400'
-    if (x === Math.floor(WINDOW_WIDTH / 2) || u === 12) return 'stone-500'
-    if (hash(seed, x, u + 100) < 0.04) return 'amber-100'
-    return u > 20 ? 'indigo-950' : u > 8 ? 'indigo-900' : 'violet-900'
-  })
-}
-
-// A torch in an iron bracket.
-const TORCH_COLORS: Record<string, TailwindColor> = {
-  k: 'indigo-950',
-  r: 'red-500',
-  Y: 'amber-300',
-  O: 'orange-500',
-  y: 'amber-200',
-  o: 'orange-400',
-  s: 'slate-500',
-  w: 'amber-800',
-  S: 'slate-600',
-}
-
-const TORCH = pixelArt(
-  `
-  ..k..
-  .krk.
-  kOYOk
-  koyok
-  koyok
-  ksssk
-  .kwk.
-  .kwk.
-  .kwk.
-  kSSSk
-  kSSSk
-  `,
-  (char) => TORCH_COLORS[char],
-)
-
-// The secret passage: a pitch-black arch with a few loose dark stones around its edge.
-const PASSAGE_WIDTH = 30
-const PASSAGE_HEIGHT = 44
-
-function passageShape(seed: number): Shape {
-  return outlinedShape(PASSAGE_WIDTH, PASSAGE_HEIGHT, (x, u) => {
-    const depth = archDepth(PASSAGE_WIDTH, PASSAGE_HEIGHT, x, u)
-    if (depth <= 0) return null
-    if (depth < 2 && hash(seed, x, u + 200) < 0.5) return 'stone-600'
-    return 'black'
-  })
-}
-
 function generateField(seed: number): Field {
   const heights = Array.from({ length: WIDTH }, () => FLOOR)
   const columns = fieldColumns(WIDTH, ROWS, floorColor)
@@ -115,14 +56,13 @@ function generateField(seed: number): Field {
 
   // Between each pair of dresses, and between the last one and the passage, a window or a
   // torch in turn.
-  const windowArt = windowShape(seed)
   const ends = [...dresses.map((d) => d.left), PASSAGE_LEFT]
   dresses.forEach((dress, i) => {
     const middle = Math.round((dress.right + ends[i + 1]) / 2)
-    if (i % 2 === 0) stamp(columns, windowArt, middle - Math.floor(windowArt.width / 2), FLOOR + 26)
+    if (i % 2 === 0) stamp(columns, WINDOW, middle - Math.floor(WINDOW.width / 2), FLOOR + 26)
     else stamp(columns, TORCH, middle - Math.floor(TORCH.width / 2), FLOOR + 34)
   })
-  stamp(columns, passageShape(seed), PASSAGE_LEFT, FLOOR)
+  stamp(columns, PASSAGE, PASSAGE_LEFT, FLOOR)
 
   return {
     width: WIDTH,

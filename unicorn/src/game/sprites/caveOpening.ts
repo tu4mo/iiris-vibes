@@ -1,0 +1,94 @@
+import type { TailwindColor } from '../../drawing/colors'
+import { pixelArt } from '../../drawing/pixelArt'
+import type { Shape } from '../shape'
+
+// The cave's way out: an arch looking onto the sunny field from the first level, with a
+// rim of rock lit by the daylight (L, and D on the outside). Through it are the day sky
+// (bands 3 to 8, matching the meadow's), a slice of the rainbow (r o a g s i v), and
+// green hills with flowers (G, H, l and f). The bottom two rows are grass growing on the
+// cave floor in the sunlight. Empty cells around the arch let the rock show through.
+const COLORS: Record<string, TailwindColor> = {
+  L: 'stone-300',
+  D: 'stone-500',
+  '3': 'blue-300',
+  '4': 'sky-300',
+  '5': 'sky-200',
+  '6': 'cyan-100',
+  '7': 'sky-100',
+  '8': 'blue-50',
+  r: 'red-400',
+  o: 'orange-400',
+  a: 'amber-300',
+  g: 'green-400',
+  s: 'sky-400',
+  i: 'indigo-400',
+  v: 'violet-400',
+  G: 'green-500',
+  H: 'green-600',
+  l: 'lime-400',
+  f: 'rose-400',
+}
+
+export const CAVE_OPENING: Shape = pixelArt(
+  `
+  .................DDDDDDDDDD.................
+  ..............DDDLLLLLLLLLLDDD..............
+  ............DDLLLL33333333LLLLDD............
+  ..........DDLL3333333333333333LLDD..........
+  .........DLL44444444444444444444LLD.........
+  .......DDLL4444444444444444444444LLDD.......
+  ......DDL44444444444444444444444444LDD......
+  .....DDL4444444444444444444444444444LDD.....
+  .....DL444444444444444444444444444444LD.....
+  ....DL44444444444444444444444444444444LD....
+  ...DLL44444444444444444444444444444444LLD...
+  ...DL4444444444444444444444444444444444LD...
+  ..DL444444444444444444444444444444444444LD..
+  ..DL444444444444444444444444444444444444LD..
+  .DL55555555555555555555555555555555555555LD.
+  .DL55555555555555555555555555555555555555LD.
+  .DL55555555555555555555555555555555555555LD.
+  DLL55555555555555555555555555555555555555LLD
+  DL5555555555555555555555555555555555555555LD
+  DL5555555555555555555555555555555555555555LD
+  DL5555555555555555555555555555555555555555LD
+  DL5555555555555555555555555555555555555555LD
+  DL5555555555555555555555555555555555555555LD
+  DL5555555555555555555555555555555555555555LD
+  DL6666666666666666666666666666666666666666LD
+  DL6666666666666666666666666666666666666666LD
+  DL6666666666666666666666666666666666666666LD
+  DL6666666666666666666666666666666666666666LD
+  DL66666666666666666666666666rrrrrrrrrrrr66LD
+  DL6666666666666666666666rrrrrrrrrrrrrrrrrrLD
+  DL6666666666666666666rrrrrrroooooooooooorrLD
+  DL66666666666666666rrrrrooooooooooooooooooLD
+  DL666666666666666rrrrroooooooaaaaaaaaaaoooLD
+  DL6666666666666rrrrooooooaaaaaaaaaaaaaaaaaLD
+  DL777777777777rrrrooooaaaaaaaggggggggggaaaLD
+  DL77777777777rrrooooaaaaagggggggggggggggggLD
+  DL7777777777rrroooaaaagggggggssssssssssgggLD
+  DL77777777rrrooooaaagggggsssssssssssssssssLD
+  DL7777777rrroooaaaaggggssssssiiiiiiiiiisssLD
+  DL7777777rroooaaaggggsssssiiiiiiiiiiiiiiiiLD
+  DL777777rroooaaagggssssiiiiiivvvvvvvvvviiiLD
+  DL77777rroooaaagggssssiiiivvvvvvvvvvvvvvvvLD
+  DL7777rrrooaaagggsssiiiivvvvvv77777777vvvvLD
+  DL777rrrooaaagggsssiiivvvv7777777777777777LD
+  DL888rroooaagggsssiiivvv888888888888888888LD
+  DL88rrrooaagggsssiivvvv8888888888888888888LD
+  DL88rrolllllllllllllll88888888888888888888LD
+  DLlllflGHGHHGHHHHHHHHGlllf88888888llllfll8LD
+  DLGGHGGHGGHGHHHGGHGGHGHGGGllllllllGGHHGGHlLD
+  DLHHGHGGGGGGHHHHHHHGGGHGHHHHGGGGGHHGHGHHGHLD
+  DLHHGHHHHHHHGHGHHGHHHHHGHGGGGGHHHHGHGGGHHHLD
+  DLGGHGHGHHHHHGGHHHGHHGHHHHHHGGGGGGHHHGGGHHLD
+  DLHHGHHHHHHHHHGHGHHHGHGHGGGGGHGHHHHHHHHGGGLD
+  DLHGHGHGGHHHHHHGGHGGGGGGGGGHGGGHHGGHGGHGHHLD
+  DLHGHHHGGGHHGHGGGGGGHGGGGGHHHGGGHHGHGGHHHGLD
+  DLHGHGGGGGGHGHGHGHHHGHGHHGHGHGHGGHHGGHGGHHLD
+  ..llllllllllllllllllllllllllllllllllllllll..
+  ..GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG..
+  `,
+  (char) => COLORS[char],
+)

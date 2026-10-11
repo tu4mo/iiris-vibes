@@ -1,11 +1,10 @@
 import { CAVE_SONG } from '../../audio/songs'
 import type { TailwindColor } from '../../drawing/colors'
+import { CAVE_OPENING } from '../sprites/caveOpening'
 import { DIAMOND_SHAPES } from '../sprites/diamond'
-import { fieldColumns, type Field, type Pickup } from '../field'
+import { fieldColumns, stamp, type Field, type Pickup } from '../field'
 import { hash, pick, spread, valueNoise } from '../random'
 import { clamp } from '../math'
-import { archDepth } from '../shape'
-import { DAY_SKY, rainbowColor, skyColorAt } from '../sky'
 import type { Level } from './level'
 
 // The third level, through the castle's secret passage: a dark cave with rocky ups and
@@ -16,12 +15,12 @@ const WIDTH = 520
 const ROWS = 96
 
 // The opening near the right end, leaving room for a wide unicorn to walk into it.
-const OPENING = { width: 40, height: 54 }
 const OPENING_LEFT = WIDTH - 72
 // Walking this far into the opening goes back out to the field.
 const OPENING_ENTRY = 8
 // The ground levels out on the way to the opening, over this many columns.
 const LEVEL_OUT = { from: OPENING_LEFT - 44, over: 24 }
+// The floor's height in the opening, in cells from the bottom.
 const OPENING_GROUND = 14
 
 // Diamonds start a little into the cave, spaced a random distance apart. Some sit low
@@ -79,46 +78,6 @@ function rockColor(
   return null
 }
 
-// The way out: an arch looking onto the field from the first level, with the day sky, a
-// slice of the rainbow and green hills, and a daylit rim of rock around its edge.
-function paintOpening(seed: number, columns: (TailwindColor | null)[][]) {
-  const floorRow = ROWS - OPENING_GROUND
-  const rainbow = { center: { x: OPENING.width / 2 + 12, y: -6 }, outer: 34, bandWidth: 2 }
-
-  for (let x = -2; x < OPENING.width + 2; x++) {
-    const column = columns[OPENING_LEFT + x]
-    const hill = Math.round(4 + valueNoise(seed, x, 9, 77) * 8)
-    for (let u = 0; u < OPENING.height + 2; u++) {
-      const row = floorRow - 1 - u
-      const depth = archDepth(OPENING.width, OPENING.height, x, u)
-      if (depth <= -2) continue
-      // A rim of rock around the edge, lit by the daylight coming in.
-      if (depth <= 0) {
-        column[row] = depth > -1 ? 'stone-300' : 'stone-500'
-        continue
-      }
-      if (u < hill) {
-        const flower = hash(seed, x, 78)
-        column[row] =
-          u === hill - 1
-            ? flower < 0.15
-              ? 'rose-400'
-              : 'lime-400'
-            : pick(['green-500', 'green-600'], hash(seed, x, u))
-      } else {
-        column[row] =
-          rainbowColor(rainbow.center, rainbow.outer, rainbow.bandWidth, x, u) ??
-          skyColorAt(ROWS, DAY_SKY, row)
-      }
-    }
-    // Grass grows on the floor in the sunlight.
-    if (x >= 0 && x < OPENING.width) {
-      column[floorRow] = 'lime-400'
-      column[floorRow + 1] = 'green-500'
-    }
-  }
-}
-
 function placeDiamonds(seed: number, heights: number[]): Pickup[] {
   return spread(seed, 83, FIRST_DIAMOND, OPENING_LEFT - 30, DIAMOND_GAP).map((left, i) => {
     const style = Math.floor(hash(seed, i, 80) * DIAMOND_SHAPES.length)
@@ -143,7 +102,9 @@ function generateField(seed: number): Field {
   const columns = fieldColumns(WIDTH, ROWS, (column, row) =>
     rockColor(seed, column, row, heights[column], ceilings[column]),
   )
-  paintOpening(seed, columns)
+  // The sprite's rim of rock starts 2 cells left of the opening, and its grass covers the
+  // top 2 rows of the floor.
+  stamp(columns, CAVE_OPENING, OPENING_LEFT - 2, OPENING_GROUND - 2)
 
   return {
     width: WIDTH,
