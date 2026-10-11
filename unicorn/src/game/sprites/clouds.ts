@@ -1,5 +1,6 @@
 import type { TailwindColor } from '../../drawing/colors'
-import { drawnShape, type Shape } from '../shape'
+import { pixelArt } from '../../drawing/pixelArt'
+import type { Shape } from '../shape'
 
 // The clouds in the meadow's sky, drawn by hand. Each is a heap of round puffs, lit from
 // the top left: white, with shade on the lower right of each puff, and a flat bottom.
@@ -12,7 +13,7 @@ const COLORS: Record<string, TailwindColor> = {
 const colorOf = (char: string) => COLORS[char]
 
 export const CLOUDS: Shape[] = [
-  drawnShape(
+  pixelArt(
     `
     ....WWWW....
     .WWWWWWWsW..
@@ -22,7 +23,7 @@ export const CLOUDS: Shape[] = [
     `,
     colorOf,
   ),
-  drawnShape(
+  pixelArt(
     `
     .......WWWW.......
     .....WWWWWWWs.....
@@ -34,7 +35,7 @@ export const CLOUDS: Shape[] = [
     `,
     colorOf,
   ),
-  drawnShape(
+  pixelArt(
     `
     ..........WWWWW...........
     ........WWWWWWWWs.........
@@ -48,7 +49,7 @@ export const CLOUDS: Shape[] = [
     `,
     colorOf,
   ),
-  drawnShape(
+  pixelArt(
     `
     .........WWWW.......WWW.........
     .......WWWWWWWs...WWWWWWs.......
@@ -60,7 +61,7 @@ export const CLOUDS: Shape[] = [
     `,
     colorOf,
   ),
-  drawnShape(
+  pixelArt(
     `
     ..............WWWWW.................
     ............WWWWWWWWW...............

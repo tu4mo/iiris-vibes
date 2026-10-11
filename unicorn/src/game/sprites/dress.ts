@@ -1,6 +1,7 @@
 import type { TailwindColor } from '../../drawing/colors'
 import type { Pixel } from '../../drawing/types'
-import { drawnShape, type Shape } from '../shape'
+import { pixelArt } from '../../drawing/pixelArt'
+import type { Shape } from '../shape'
 import {
   connectedGroups,
   findLegs,
@@ -8,7 +9,7 @@ import {
   outlineColor,
   recolor,
   type Sprite,
-} from '../unicorn'
+} from './unicorn'
 
 // Colorful dresses hanging on the castle walls. Jumping into one collects it, and the
 // unicorn puts it on.
@@ -83,7 +84,7 @@ function dressColor(style: DressStyle, char: string, x: number, u: number): Tail
 
 // Each style as a dress on its hanger, all the same size.
 export const DRESS_SHAPES: Shape[] = DRESS_STYLES.map((style) =>
-  drawnShape(DRESS, (char, x, u) => dressColor(style, char, x, u)),
+  pixelArt(DRESS, (char, x, u) => dressColor(style, char, x, u)),
 )
 export const DRESS_WIDTH = DRESS_SHAPES[0].width
 

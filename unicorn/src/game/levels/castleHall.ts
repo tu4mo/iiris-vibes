@@ -1,9 +1,10 @@
 import { CASTLE_SONG } from '../../audio/songs'
 import type { TailwindColor } from '../../drawing/colors'
+import { pixelArt } from '../../drawing/pixelArt'
 import { DRESS_STYLES, DRESS_WIDTH } from '../sprites/dress'
 import { fieldColumns, stamp, type Field, type Pickup } from '../field'
 import { hash, spread } from '../random'
-import { archDepth, drawnShape, outlinedShape, type Shape } from '../shape'
+import { archDepth, outlinedShape, type Shape } from '../shape'
 import type { Level } from './level'
 
 // The second level, inside the castle: a long hall with dresses hanging on its walls to
@@ -65,7 +66,7 @@ const TORCH_COLORS: Record<string, TailwindColor> = {
   S: 'slate-600',
 }
 
-const TORCH = drawnShape(
+const TORCH = pixelArt(
   `
   ..k..
   .krk.
