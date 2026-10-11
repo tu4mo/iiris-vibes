@@ -169,15 +169,6 @@ export function LevelRun({
                 <Unicorn sprite={shown} cell={cell} facing={facing} />
               </div>
             )}
-            {/* One overlay draws every grid line, instead of a border on each pixel. */}
-            <div
-              className="pointer-events-none absolute inset-0"
-              style={{
-                backgroundImage:
-                  'linear-gradient(to right, rgb(0 0 0 / 0.12) 1px, transparent 1px), linear-gradient(to bottom, rgb(0 0 0 / 0.12) 1px, transparent 1px)',
-                backgroundSize: `${cell}px ${cell}px`,
-              }}
-            />
           </div>
         </>
       )}
