@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Drawing } from '../../drawing/types'
+import { music } from '../../audio/music'
 import { LEVELS } from '../../game/levels'
 import { LevelRun } from './LevelRun'
 import { useMusic } from './useMusic'
@@ -31,6 +32,7 @@ export function Game(props: GameProps) {
   const { muted, toggleMuted } = useMusic(LEVELS[level].music)
 
   function handleExit(wearing: number | null) {
+    music.effect('level')
     setProgress((p) =>
       p.level < LEVELS.length - 1
         ? { level: p.level + 1, run: p.run + 1, dress: wearing }

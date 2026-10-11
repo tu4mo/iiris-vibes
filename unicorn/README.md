@@ -5,7 +5,8 @@ onto) snails along the way. Inside the castle, jump for the dresses hanging on t
 (the unicorn wears the last one it grabbed) and find the secret passage at the end. The
 passage is a dark cave full of diamonds; its way out leads back to the field, and the game
 starts over. Each level has its own looping chiptune, synthesized in the browser; the
-speaker button turns it off. Click the unicorn in the top-left corner to open the editor
+sound effects (jumping, squishing a snail, picking things up, a new level) use the same
+synth, and the speaker button turns all sound off. Click the unicorn in the top-left corner to open the editor
 and redesign it; the game uses your drawing as the sprite.
 
 Everything is drawn with DOM elements, no `<canvas>`.
@@ -21,8 +22,8 @@ npm run lint    # oxlint
 
 ## Layout
 
-- `src/audio` – the music: a text format for songs, the three level songs, and a small
-  Web Audio synth that loops one at a time.
+- `src/audio` – the music and sound effects: a text format for songs, the three level
+  songs, the effects, and a small Web Audio synth that plays them.
 - `src/drawing` – the drawing model: layers, pixels, painting, storage. No React.
 - `src/presets` – the built-in unicorn and its hair styles.
 - `src/game` – shared game pieces: the `Field` model, sky bands, indoor walls, seeded noise,

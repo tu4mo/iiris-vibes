@@ -238,9 +238,9 @@ export function LevelRun({
         </button>
         <button
           type="button"
-          aria-label="Music"
+          aria-label="Sound"
           aria-pressed={!muted}
-          title={muted ? 'Turn music on' : 'Turn music off'}
+          title={muted ? 'Turn sound on' : 'Turn sound off'}
           className="rounded-2xl bg-indigo-950/85 p-3 text-sky-100 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
           // Clicking would otherwise leave it focused, and Space (jump) would press it again.
           onPointerDown={(event) => event.preventDefault()}

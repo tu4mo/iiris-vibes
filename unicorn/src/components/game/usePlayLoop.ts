@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { music } from '../../audio/music'
 import type { Field, FieldSnail } from '../../game/field'
 import { pickupBottom, pickupShape } from '../../game/pickup'
 import type { Sprite } from '../../game/sprite'
@@ -31,7 +32,7 @@ type PlayLoopOptions = {
 }
 
 // Plays one level: reads the keyboard, runs walking, jumping, snail collisions and picking
-// things up, and
+// things up, with their sound effects, and
 // publishes whole-cell changes to React, a few times a second while walking.
 export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
   const maxX = Math.max(0, field.width - sprite.width)
@@ -156,6 +157,7 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
       if (jumpQueued && grounded) {
         vy = JUMP_SPEED
         grounded = false
+        music.effect('jump')
       }
       jumpQueued = false
 
@@ -184,6 +186,7 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
             vy = BOUNCE_SPEED
             grounded = false
           })
+          if (!grounded) music.effect('stomp')
         }
       } else if (floor < altitude - 1) {
         // Walked off a snail or a ledge: fall.
@@ -206,6 +209,7 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
       if (touched.length > 0) {
         collectedRef.current = [...collectedRef.current, ...touched]
         setCollected(collectedRef.current)
+        for (const kind of new Set(touched.map((i) => field.pickups[i].kind))) music.effect(kind)
       }
 
       placeRef.current = { position, facing }

@@ -41,7 +41,7 @@ export type CompiledSong = { stepSeconds: number; steps: number; events: SongEve
 
 const SEMITONES: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }
 
-function frequency(note: string): number {
+export function frequency(note: string): number {
   const match = /^([A-G])(#|b)?(-?\d)$/.exec(note)
   if (!match) throw new Error(`Not a note: ${note}`)
   const [, letter, accidental, octave] = match

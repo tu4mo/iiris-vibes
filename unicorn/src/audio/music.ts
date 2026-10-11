@@ -1,9 +1,13 @@
+import { EFFECTS, type Effect, type Tone } from './effects'
 import { compileSong, type CompiledSong, type Drum, type Song, type Voice, type Wave } from './song'
 
-// Plays one song at a time on a loop, synthesized like an old 8-bit console: pulse and
-// triangle waves for notes, and noise for drums. Switching songs crossfades.
+// Plays one song at a time on a loop, and sound effects over it, synthesized like an old
+// 8-bit console: pulse and triangle waves for notes, and noise for drums. Switching songs
+// crossfades.
 
 const VOLUME = 0.2
+// Effects play a little louder than the music, so they stand out from it.
+const EFFECTS_VOLUME = 2.5
 // Notes are scheduled this far ahead, by a timer that runs this often (in seconds).
 const LOOKAHEAD = 0.15
 const TICK = 0.025
@@ -20,7 +24,10 @@ type Playing = {
 
 class Music {
   private context: AudioContext | null = null
+  // Everything goes through the master volume, which muting turns down; effects also go
+  // through their own.
   private master: GainNode | null = null
+  private effects: GainNode | null = null
   private waves = new Map<Wave, PeriodicWave>()
   private noise: AudioBuffer | null = null
   private playing: Playing | null = null
@@ -36,6 +43,9 @@ class Music {
       this.master = this.context.createGain()
       this.master.gain.value = this.muted ? 0 : VOLUME
       this.master.connect(this.context.destination)
+      this.effects = this.context.createGain()
+      this.effects.gain.value = EFFECTS_VOLUME
+      this.effects.connect(this.master)
       document.addEventListener('visibilitychange', this.handleVisibility)
       window.setInterval(this.schedule, TICK * 1000)
       if (this.wanted) this.start(this.wanted)
@@ -46,6 +56,14 @@ class Music {
   play(song: Song) {
     this.wanted = song
     if (this.context && this.playing?.song !== song) this.start(song)
+  }
+
+  // Plays a sound effect, unless sound hasn't been unlocked yet.
+  effect(name: Effect) {
+    const context = this.context
+    if (!context || context.state !== 'running') return
+    const now = context.currentTime + 0.01
+    for (const tone of EFFECTS[name]) this.tone(tone, now + tone.at)
   }
 
   setMuted(muted: boolean) {
@@ -161,6 +179,38 @@ class Music {
     oscillator.connect(envelope).connect(output)
     oscillator.start(time)
     oscillator.stop(end + 0.1)
+  }
+
+  // One tone of an effect: a sharp start, then a fade out while the pitch slides.
+  private tone(tone: Tone, time: number) {
+    const context = this.context!
+    const end = time + tone.length
+    const envelope = context.createGain()
+    envelope.gain.setValueAtTime(0, time)
+    envelope.gain.linearRampToValueAtTime(tone.volume, time + 0.003)
+    envelope.gain.exponentialRampToValueAtTime(0.001, end)
+    envelope.connect(this.effects!)
+
+    if (tone.wave === 'noise') {
+      // Noise through a filter centered on `from` Hz.
+      const source = context.createBufferSource()
+      source.buffer = this.noiseBuffer()
+      const filter = context.createBiquadFilter()
+      filter.type = 'bandpass'
+      filter.frequency.value = tone.from
+      source.connect(filter).connect(envelope)
+      source.start(time, Math.random() * 0.5)
+      source.stop(end)
+      return
+    }
+    const oscillator = context.createOscillator()
+    if (tone.wave === 'triangle') oscillator.type = 'triangle'
+    else oscillator.setPeriodicWave(this.pulse(tone.wave))
+    oscillator.frequency.setValueAtTime(tone.from, time)
+    if (tone.to) oscillator.frequency.exponentialRampToValueAtTime(tone.to, end)
+    oscillator.connect(envelope)
+    oscillator.start(time)
+    oscillator.stop(end + 0.02)
   }
 
   private noiseBuffer() {

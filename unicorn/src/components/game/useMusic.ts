@@ -4,7 +4,8 @@ import { loadMuted, saveMuted } from '../../audio/settings'
 import type { Song } from '../../audio/song'
 
 // Plays `song` on a loop, switching when it changes. Sound starts with the first key press
-// or click, since browsers don't allow it before. Returns the mute setting and a toggle.
+// or click, since browsers don't allow it before. Returns the mute setting, which silences
+// the sound effects too, and a toggle.
 export function useMusic(song: Song) {
   const [muted, setMuted] = useState(loadMuted)
 
