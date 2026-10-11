@@ -181,17 +181,27 @@ function generateField(seed: number): Field {
   stamp(columns, CASTLE, castleLeft, CASTLE_GROUND)
 
   // Walking into the castle's doorway finishes the level.
-  return { width: WIDTH, rows: ROWS, heights, columns, exit: castleLeft + CASTLE_DOOR_LEFT, snails }
+  return {
+    width: WIDTH,
+    rows: ROWS,
+    heights,
+    columns,
+    exit: castleLeft + CASTLE_DOOR_LEFT,
+    snails,
+    dresses: [],
+  }
 }
 
 export const MEADOW: Level = {
   width: WIDTH,
   rows: ROWS,
   generate: generateField,
-  backdrop: generateBackdrop,
-  sky: DAY_SKY,
-  skyAtExit: DUSK_SKY,
-  shadeAtExit: 0.25,
+  scenery: {
+    kind: 'outdoors',
+    sky: DAY_SKY,
+    skyAtExit: DUSK_SKY,
+    shadeAtExit: 0.25,
+    backdrop: generateBackdrop,
+  },
   hint: 'Walk to the castle with ← and →, and jump over snails with Space.',
-  exitTitle: 'You made it to the castle!',
 }

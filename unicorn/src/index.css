@@ -13,3 +13,10 @@
     linear-gradient(to bottom, rgb(255 255 255 / 0.07) 1px, transparent 1px);
   background-size: 16px 16px;
 }
+
+/* Coming into a new level: a black overlay that fades away. */
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}

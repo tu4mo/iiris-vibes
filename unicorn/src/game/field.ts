@@ -10,6 +10,17 @@ import { SNAIL_HEIGHT, SNAIL_WIDTH } from './snail'
 // the shell's top, from the bottom.
 export type FieldSnail = { left: number; right: number; ground: number; top: number }
 
+// A dress hanging on the wall, to collect by jumping into it: column range, the height of
+// the floor below it, how far above the unicorn's head it hangs (see dressBottom), and
+// which of DRESS_STYLES it is.
+export type FieldDress = {
+  left: number
+  right: number
+  ground: number
+  lift: number
+  style: number
+}
+
 export type Field = {
   width: number
   rows: number
@@ -21,6 +32,7 @@ export type Field = {
   exit: number
   // Snails move, so they're drawn separately from `columns`.
   snails: FieldSnail[]
+  dresses: FieldDress[]
 }
 
 // Snail positions from `from` to `to`, spaced a random distance apart.

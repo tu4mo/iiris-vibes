@@ -26,7 +26,7 @@ const step = (cell: Cell, [dx, dy]: readonly [number, number]) => ({
 })
 
 // Groups of pixels connected edge to edge.
-function connectedGroups(pixels: Pixel[]): Pixel[][] {
+export function connectedGroups(pixels: Pixel[]): Pixel[][] {
   const byKey = new Map(pixels.map((p) => [cellKey(p), p]))
   const seen = new Set<string>()
   const groups: Pixel[][] = []
@@ -54,7 +54,7 @@ function connectedGroups(pixels: Pixel[]): Pixel[][] {
 
 // The legs: scanning up from the bottom, the rows where the pixels still form two or
 // more separate shapes, before they join the body. Empty when no legs can be told apart.
-function findLegs(sprite: Sprite): Pixel[][] {
+export function findLegs(sprite: Sprite): Pixel[][] {
   let legs: Pixel[][] = []
   for (let top = sprite.height - 1; top >= 0; top--) {
     const groups = connectedGroups(sprite.pixels.filter((p) => p.y >= top))
@@ -90,17 +90,15 @@ export function walkFrames(sprite: Sprite): [Sprite, Sprite] {
   return [frame(1), frame(-1)]
 }
 
-function mostCommon<T>(items: T[]): T | undefined {
+export function mostCommon<T>(items: T[]): T | undefined {
   const counts = new Map<T, number>()
   for (const item of items) counts.set(item, (counts.get(item) ?? 0) + 1)
   return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0]
 }
 
-// The eye: the largest blob in the outline's color that sits fully inside the sprite,
-// plus any highlight pixels it surrounds. Returns the pixels to draw it closed: the eye
-// filled with the surrounding skin color, keeping its bottom row as a dark lid line. Null
-// when no eye can be found.
-export function findEye(sprite: Sprite): Pixel[] | null {
+// Whether a pixel is on the sprite's edge: next to an empty cell that can be reached from
+// outside the sprite.
+function edgeTest(sprite: Sprite): (p: Pixel) => boolean {
   const byKey = new Map(sprite.pixels.map((p) => [cellKey(p), p]))
   const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < sprite.width && y < sprite.height
 
@@ -117,12 +115,25 @@ export function findEye(sprite: Sprite): Pixel[] | null {
     exterior.add(key)
     for (const [dx, dy] of SIDES) stack.push([x + dx, y + dy])
   }
-  const touchesOutside = (p: Pixel) =>
+  return (p) =>
     SIDES.some((side) => {
       const n = step(p, side)
       return exterior.has(cellKey(n)) || !inside(n.x, n.y)
     })
+}
 
+// The outline's color: the most common color around the sprite's edge.
+export function outlineColor(sprite: Sprite) {
+  return mostCommon(sprite.pixels.filter(edgeTest(sprite)).map((p) => p.color))
+}
+
+// The eye: the largest blob in the outline's color that sits fully inside the sprite,
+// plus any highlight pixels it surrounds. Returns the pixels to draw it closed: the eye
+// filled with the surrounding skin color, keeping its bottom row as a dark lid line. Null
+// when no eye can be found.
+export function findEye(sprite: Sprite): Pixel[] | null {
+  const byKey = new Map(sprite.pixels.map((p) => [cellKey(p), p]))
+  const touchesOutside = edgeTest(sprite)
   const outlineColor = mostCommon(sprite.pixels.filter(touchesOutside).map((p) => p.color))
   const candidates = connectedGroups(
     sprite.pixels.filter((p) => p.color === outlineColor && !touchesOutside(p)),

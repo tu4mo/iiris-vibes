@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { DRESS_HEIGHT, dressBottom } from '../../game/dress'
 import type { Field, FieldSnail } from '../../game/field'
 import type { Sprite } from '../../game/sprite'
 
@@ -29,7 +30,8 @@ type PlayLoopOptions = {
   paused: boolean
 }
 
-// Plays one level: reads the keyboard, runs walking, jumping and snail collisions, and
+// Plays one level: reads the keyboard, runs walking, jumping, snail collisions and picking
+// up dresses, and
 // publishes whole-cell changes to React, a few times a second while walking.
 export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
   const maxX = Math.max(0, field.width - sprite.width)
@@ -44,6 +46,8 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
   const [hornTick, setHornTick] = useState(0)
   // Indexes of the snails that are squished right now.
   const [squished, setSquished] = useState<number[]>([])
+  // Indexes of the dresses picked up so far, in the order they were picked up.
+  const [collected, setCollected] = useState<number[]>([])
   // Set once the unicorn reaches the field's exit; the level is over.
   const [finished, setFinished] = useState(false)
 
@@ -58,6 +62,8 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
     position: START_X,
     facing: 1,
   })
+  // Also kept across loop restarts, so a dress isn't picked up twice.
+  const collectedRef = useRef<number[]>([])
 
   useEffect(() => {
     const held = new Set<string>()
@@ -187,6 +193,20 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
         altitude = floor
       }
 
+      // Pick up any dress the unicorn's body touches.
+      const left = Math.floor(position)
+      const touched = field.dresses.flatMap((dress, i) => {
+        if (collectedRef.current.includes(i)) return []
+        const bottom = dressBottom(dress, sprite.height)
+        const across = left < dress.right && left + sprite.width > dress.left
+        const level = altitude + sprite.height > bottom && altitude < bottom + DRESS_HEIGHT
+        return across && level && sprite.width > 0 ? [i] : []
+      })
+      if (touched.length > 0) {
+        collectedRef.current = [...collectedRef.current, ...touched]
+        setCollected(collectedRef.current)
+      }
+
       placeRef.current = { position, facing }
       setFacing(facing)
       setX(Math.floor(position))
@@ -223,5 +243,5 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
     }
   }, [maxX, field, sprite, steps])
 
-  return { x, facing, step, altitude, blink, hornTick, squished, finished }
+  return { x, facing, step, altitude, blink, hornTick, squished, collected, finished }
 }

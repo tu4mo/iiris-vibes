@@ -1,12 +1,14 @@
-import { memo, useMemo } from 'react'
+import { memo, useId, useMemo } from 'react'
 import { cssColor, type TailwindColor } from '../../drawing/colors'
 import { cellKey } from '../../drawing/grid'
 import type { Pixel } from '../../drawing/types'
+import { DRESS_HEIGHT, DRESS_SHAPES, dressBottom } from '../../game/dress'
 import { SNAIL_FRAMES, SNAIL_SQUISHED, SQUISH_SPREAD } from '../../game/snail'
 import type { Shape } from '../../game/shape'
 import type { Sprite } from '../../game/sprite'
 import type { Field } from '../../game/field'
 import { skyBands, type Sky } from '../../game/sky'
+import { BRICK_HEIGHT, wallBricks, type Wall } from '../../game/wall'
 import { PixelRects } from '../PixelArt'
 
 // Pixels as absolutely positioned divs, `cell` px each, inside a positioned parent.
@@ -45,7 +47,8 @@ function columnRuns(colors: (TailwindColor | null)[]) {
 export const FieldView = memo(function FieldView({ field, cell }: FieldViewProps) {
   const columns = useMemo(() => field.columns.map(columnRuns), [field])
   return (
-    <div className="flex">
+    // Positioned, so it paints over a wall behind it.
+    <div className="relative flex">
       {columns.map((runs, x) => (
         <div key={x} className="flex shrink-0 flex-col" style={{ width: cell }}>
           {runs.map((run, i) => (
@@ -103,6 +106,70 @@ export const BackdropView = memo(function BackdropView({
   )
 })
 
+type WallViewProps = { wall: Wall; seed: number; width: number; rows: number; cell: number }
+
+// An indoor wall behind the field, as one SVG scaled up to the cell size: mortar behind
+// the bricks, and a shadow fading down from the ceiling.
+export const WallView = memo(function WallView({ wall, seed, width, rows, cell }: WallViewProps) {
+  const shadowId = useId()
+  const bricks = useMemo(() => wallBricks(seed, wall, width, rows), [seed, wall, width, rows])
+  return (
+    <svg
+      className="absolute top-0 left-0"
+      width={width * cell}
+      height={rows * cell}
+      viewBox={`0 0 ${width} ${rows}`}
+      preserveAspectRatio="none"
+      shapeRendering="crispEdges"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id={shadowId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={cssColor(wall.ceiling)} />
+          <stop offset="0.5" stopColor={cssColor(wall.ceiling)} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <rect width={width} height={rows} fill={cssColor(wall.mortar)} />
+      {bricks.map((b) => (
+        <rect
+          key={`${b.x},${b.y}`}
+          x={b.x}
+          y={b.y}
+          width={b.width}
+          height={BRICK_HEIGHT}
+          fill={cssColor(b.color)}
+        />
+      ))}
+      <rect width={width} height={rows} fill={`url(#${CSS.escape(shadowId)})`} />
+    </svg>
+  )
+})
+
+type DressesProps = { field: Field; cell: number; spriteHeight: number; collected: number[] }
+
+// The dresses still hanging on the wall, a little above the unicorn's head.
+export const Dresses = memo(function Dresses({
+  field,
+  cell,
+  spriteHeight,
+  collected,
+}: DressesProps) {
+  return field.dresses.map((dress, i) =>
+    collected.includes(i) ? null : (
+      <div
+        key={i}
+        className="absolute"
+        style={{
+          left: dress.left * cell,
+          top: (field.rows - dressBottom(dress, spriteHeight) - DRESS_HEIGHT) * cell,
+        }}
+      >
+        <PixelDivs pixels={DRESS_SHAPES[dress.style].pixels} cell={cell} />
+      </div>
+    ),
+  )
+})
+
 type SnailProps = { shape: Shape; left: number; ground: number; rows: number; cell: number }
 
 // One snail, standing on the ground `ground` cells up from the bottom of a field `rows` tall.
@@ -155,11 +222,12 @@ export const Unicorn = memo(function Unicorn({ sprite, cell, facing }: UnicornPr
   )
 })
 
-// The unicorn drawn small as an SVG, for the button that opens the editor.
-export function SpriteIcon({ sprite }: { sprite: Sprite }) {
+// A shape drawn small as an SVG: the unicorn on the button that opens the editor, and
+// the dresses picked up so far.
+export function SpriteIcon({ sprite, className = 'h-12' }: { sprite: Sprite; className?: string }) {
   return (
     <svg
-      className="h-12 w-auto"
+      className={`${className} w-auto`}
       viewBox={`0 0 ${sprite.width} ${sprite.height}`}
       shapeRendering="crispEdges"
       aria-hidden="true"
