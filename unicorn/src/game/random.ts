@@ -20,3 +20,20 @@ export function valueNoise(seed: number, column: number, spacing: number, salt: 
   const b = hash(seed, k + 1, salt)
   return a + (b - a) * eased
 }
+
+// Positions from `from` up to (not including) `to`, each a random distance from the one
+// before: at least `gap.min` and less than `gap.max`.
+export function spread(
+  seed: number,
+  salt: number,
+  from: number,
+  to: number,
+  gap: { min: number; max: number },
+) {
+  const positions: number[] = []
+  for (let x = from, i = 0; x < to; i++) {
+    positions.push(x)
+    x += gap.min + Math.floor(hash(seed, i, salt) * (gap.max - gap.min))
+  }
+  return positions
+}

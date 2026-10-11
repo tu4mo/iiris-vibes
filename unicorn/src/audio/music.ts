@@ -29,7 +29,7 @@ class Music {
   private master: GainNode | null = null
   private effects: GainNode | null = null
   private waves = new Map<Wave, PeriodicWave>()
-  private noise: AudioBuffer | null = null
+  private noiseBuffer: AudioBuffer | null = null
   private playing: Playing | null = null
   // The song asked for, which may be waiting for the audio to be unlocked.
   private wanted: Song | null = null
@@ -106,20 +106,14 @@ class Music {
         if (event.kind === 'drum')
           this.drum(event.drum, event.volume, playing.nextTime, playing.gain)
         else {
+          const { voice, frequency } = event
           const seconds = event.steps * compiled.stepSeconds
-          const { voice } = event
-          this.note(voice, event.frequency, playing.nextTime, seconds, voice.volume, playing.gain)
+          const play = (time: number, volume: number) =>
+            this.note(voice, frequency, time, seconds, volume, playing.gain)
+          play(playing.nextTime, voice.volume)
           if (voice.echo) {
             const delay = voice.echo.delay * compiled.stepSeconds
-            const volume = voice.volume * voice.echo.volume
-            this.note(
-              voice,
-              event.frequency,
-              playing.nextTime + delay,
-              seconds,
-              volume,
-              playing.gain,
-            )
+            play(playing.nextTime + delay, voice.volume * voice.echo.volume)
           }
         }
       }
@@ -154,9 +148,7 @@ class Music {
     output: AudioNode,
   ) {
     const context = this.context!
-    const oscillator = context.createOscillator()
-    if (voice.wave === 'triangle') oscillator.type = 'triangle'
-    else oscillator.setPeriodicWave(this.pulse(voice.wave))
+    const oscillator = this.oscillator(voice.wave)
     oscillator.frequency.value = frequency
 
     const end = time + seconds
@@ -193,19 +185,10 @@ class Music {
 
     if (tone.wave === 'noise') {
       // Noise through a filter centered on `from` Hz.
-      const source = context.createBufferSource()
-      source.buffer = this.noiseBuffer()
-      const filter = context.createBiquadFilter()
-      filter.type = 'bandpass'
-      filter.frequency.value = tone.from
-      source.connect(filter).connect(envelope)
-      source.start(time, Math.random() * 0.5)
-      source.stop(end)
+      this.noise('bandpass', tone.from, time, end).connect(envelope)
       return
     }
-    const oscillator = context.createOscillator()
-    if (tone.wave === 'triangle') oscillator.type = 'triangle'
-    else oscillator.setPeriodicWave(this.pulse(tone.wave))
+    const oscillator = this.oscillator(tone.wave)
     oscillator.frequency.setValueAtTime(tone.from, time)
     if (tone.to) oscillator.frequency.exponentialRampToValueAtTime(tone.to, end)
     oscillator.connect(envelope)
@@ -213,13 +196,32 @@ class Music {
     oscillator.stop(end + 0.02)
   }
 
-  private noiseBuffer() {
-    if (this.noise) return this.noise
+  private oscillator(wave: Wave) {
+    const oscillator = this.context!.createOscillator()
+    if (wave === 'triangle') oscillator.type = 'triangle'
+    else oscillator.setPeriodicWave(this.pulse(wave))
+    return oscillator
+  }
+
+  // White noise from `time` to `end` through a filter at `frequency` Hz. Returns the filter
+  // to connect onward.
+  private noise(type: BiquadFilterType, frequency: number, time: number, end: number) {
     const context = this.context!
-    this.noise = context.createBuffer(1, context.sampleRate, context.sampleRate)
-    const data = this.noise.getChannelData(0)
-    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
-    return this.noise
+    if (!this.noiseBuffer) {
+      this.noiseBuffer = context.createBuffer(1, context.sampleRate, context.sampleRate)
+      const data = this.noiseBuffer.getChannelData(0)
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
+    }
+    const source = context.createBufferSource()
+    source.buffer = this.noiseBuffer
+    const filter = context.createBiquadFilter()
+    filter.type = type
+    filter.frequency.value = frequency
+    source.connect(filter)
+    // Start somewhere random in the second of noise, so hits don't all sound the same.
+    source.start(time, Math.random() * 0.5)
+    source.stop(end)
+    return filter
   }
 
   private drum(drum: Drum, volume: number, time: number, output: AudioNode) {
@@ -245,16 +247,9 @@ class Music {
     }
 
     // Snares and hi-hats are bursts of noise, the hi-hat shorter and higher.
-    const source = context.createBufferSource()
-    source.buffer = this.noiseBuffer()
-    const filter = context.createBiquadFilter()
-    filter.type = 'highpass'
-    filter.frequency.value = drum === 's' ? 1200 : 7000
     const length = drum === 's' ? 0.14 : 0.04
     fade(length)
-    source.connect(filter).connect(envelope)
-    source.start(time, Math.random() * 0.5)
-    source.stop(time + length)
+    this.noise('highpass', drum === 's' ? 1200 : 7000, time, time + length).connect(envelope)
   }
 }
 

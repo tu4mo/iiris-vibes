@@ -1,8 +1,9 @@
 import { CAVE_SONG } from '../../audio/songs'
 import type { TailwindColor } from '../../drawing/colors'
+import { DIAMOND_SHAPES } from '../diamond'
 import type { Field, Pickup } from '../field'
-import { pickupShape, pickupStyles } from '../pickup'
-import { hash, pick, valueNoise } from '../random'
+import { hash, pick, spread, valueNoise } from '../random'
+import { archDepth } from '../shape'
 import { skyBands } from '../sky'
 import type { Level } from './level'
 import { DAY_SKY, RAINBOW } from './meadow'
@@ -81,24 +82,16 @@ function rockColor(
 // The way out: an arch looking onto the field from the first level, with the day sky, a
 // slice of the rainbow and green hills, and a daylit rim of rock around its edge.
 function paintOpening(seed: number, columns: (TailwindColor | null)[][]) {
-  const radius = OPENING.width / 2
-  const archStart = OPENING.height - radius
   const floorRow = ROWS - OPENING_GROUND
   const bands = skyBands(ROWS, DAY_SKY)
-  // How far a cell is inside the arch's edge: 0 or less is outside.
-  const inside = (x: number, u: number) => {
-    const side = Math.min(x + 0.5, OPENING.width - x - 0.5)
-    if (u < archStart) return side
-    return Math.min(side, radius - Math.hypot(x + 0.5 - radius, u + 0.5 - archStart))
-  }
-  const rainbow = { x: radius + 12, u: -6, outer: 34 }
+  const rainbow = { x: OPENING.width / 2 + 12, u: -6, outer: 34 }
 
   for (let x = -2; x < OPENING.width + 2; x++) {
     const column = columns[OPENING_LEFT + x]
     const hill = Math.round(4 + valueNoise(seed, x, 9, 77) * 8)
     for (let u = 0; u < OPENING.height + 2; u++) {
       const row = floorRow - 1 - u
-      const depth = inside(x, u)
+      const depth = archDepth(OPENING.width, OPENING.height, x, u)
       if (depth <= -2) continue
       // A rim of rock around the edge, lit by the daylight coming in.
       if (depth <= 0) {
@@ -128,27 +121,21 @@ function paintOpening(seed: number, columns: (TailwindColor | null)[][]) {
 }
 
 function placeDiamonds(seed: number, heights: number[]): Pickup[] {
-  const diamonds: Pickup[] = []
-  let left = FIRST_DIAMOND
-  for (let i = 0; left < OPENING_LEFT - 30; i++) {
-    const style = Math.floor(hash(seed, i, 80) * pickupStyles('diamond'))
-    const diamond: Pickup = {
+  return spread(seed, 83, FIRST_DIAMOND, OPENING_LEFT - 30, DIAMOND_GAP).map((left, i) => {
+    const style = Math.floor(hash(seed, i, 80) * DIAMOND_SHAPES.length)
+    const right = left + DIAMOND_SHAPES[style].width
+    const overHead = hash(seed, i, 81) < HIGH_CHANCE
+    return {
       kind: 'diamond',
       left,
-      right: left,
-      ground: 0,
-      lift: 0,
-      overHead: hash(seed, i, 81) < HIGH_CHANCE,
+      right,
+      // Above the highest rock near it, so it never sits inside a hill.
+      ground: Math.max(...heights.slice(left - 4, right + 4)),
+      lift: 2 + Math.floor(hash(seed, i, 82) * (overHead ? 8 : 6)),
+      overHead,
       style,
     }
-    diamond.right = left + pickupShape(diamond).width
-    // Above the highest rock near it, so it never sits inside a hill.
-    diamond.ground = Math.max(...heights.slice(left - 4, diamond.right + 4))
-    diamond.lift = 2 + Math.floor(hash(seed, i, 82) * (diamond.overHead ? 8 : 6))
-    diamonds.push(diamond)
-    left += DIAMOND_GAP.min + Math.floor(hash(seed, i, 83) * (DIAMOND_GAP.max - DIAMOND_GAP.min))
-  }
-  return diamonds
+  })
 }
 
 function generateField(seed: number): Field {

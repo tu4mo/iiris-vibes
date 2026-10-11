@@ -9,11 +9,6 @@ export function pickupShape(pickup: Pickup) {
   return SHAPES[pickup.kind][pickup.style]
 }
 
-// The number of styles a kind of pickup comes in.
-export function pickupStyles(kind: Pickup['kind']) {
-  return SHAPES[kind].length
-}
-
 // How high a pickup's bottom is, in cells from the bottom of the field.
 export function pickupBottom(pickup: Pickup, spriteHeight: number) {
   return pickup.ground + pickup.lift + (pickup.overHead ? spriteHeight : 0)

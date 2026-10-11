@@ -134,16 +134,16 @@ export function outlineColor(sprite: Sprite) {
 export function findEye(sprite: Sprite): Pixel[] | null {
   const byKey = new Map(sprite.pixels.map((p) => [cellKey(p), p]))
   const touchesOutside = edgeTest(sprite)
-  const outlineColor = mostCommon(sprite.pixels.filter(touchesOutside).map((p) => p.color))
+  const outline = mostCommon(sprite.pixels.filter(touchesOutside).map((p) => p.color))
   const candidates = connectedGroups(
-    sprite.pixels.filter((p) => p.color === outlineColor && !touchesOutside(p)),
+    sprite.pixels.filter((p) => p.color === outline && !touchesOutside(p)),
   )
     // Blobs connected to the outline aren't eyes.
     .filter((group) =>
       group.every((p) =>
         SIDES.every((side) => {
           const n = byKey.get(cellKey(step(p, side)))
-          return !n || n.color !== outlineColor || group.includes(n)
+          return !n || n.color !== outline || group.includes(n)
         }),
       ),
     )
@@ -166,15 +166,16 @@ export function findEye(sprite: Sprite): Pixel[] | null {
     ),
   )
   const skin = mostCommon(neighbours.map((n) => n.color))
-  if (!skin || !outlineColor) return null
+  if (!skin || !outline) return null
 
   const bottom = Math.max(...eyeCells.map((c) => c.y))
-  return eyeCells.map(({ x, y }) => ({ x, y, color: y === bottom ? outlineColor : skin }))
+  return eyeCells.map(({ x, y }) => ({ x, y, color: y === bottom ? outline : skin }))
 }
 
-// A frame with the eye closed.
-export function withEyeClosed(sprite: Sprite, closedEye: Pixel[]): Sprite {
-  const colors = new Map(closedEye.map((p) => [cellKey(p), p.color]))
+// The sprite with some of its pixels painted over in new colors. Cells it doesn't already
+// have are left out.
+export function recolor(sprite: Sprite, paint: Pixel[]): Sprite {
+  const colors = new Map(paint.map((p) => [cellKey(p), p.color]))
   return {
     ...sprite,
     pixels: sprite.pixels.map((p) => {

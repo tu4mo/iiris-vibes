@@ -2,9 +2,10 @@ import { MEADOW_SONG } from '../../audio/songs'
 import type { TailwindColor } from '../../drawing/colors'
 import type { Pixel } from '../../drawing/types'
 import { CASTLE, CASTLE_DOOR_LEFT } from '../castle'
-import { placeSnails, settleSnails, stamp, type Field } from '../field'
-import { hash, pick, valueNoise } from '../random'
+import { settleSnails, stamp, type Field } from '../field'
+import { hash, pick, spread, valueNoise } from '../random'
 import type { Sky } from '../sky'
+import { SNAIL_WIDTH } from '../snail'
 import type { Level } from './level'
 
 // The first level: a rolling green field under a rainbow, with snails to jump over and a
@@ -162,7 +163,7 @@ const CASTLE_MARGIN = 6
 const CASTLE_GROUND = 16
 const FLAT_APPROACH = 10
 
-// Snails start a little into the field and stop before the castle's approach.
+// Snails start a little into the field (give or take) and stop before the castle's approach.
 const FIRST_SNAIL = 70
 const SNAIL_GAP = { min: 45, max: 80 }
 
@@ -171,10 +172,9 @@ function generateField(seed: number): Field {
   const heights = Array.from({ length: WIDTH }, (_, column) =>
     column >= castleLeft - FLAT_APPROACH ? CASTLE_GROUND : groundHeight(seed, column),
   )
-  const snails = settleSnails(
-    heights,
-    placeSnails(seed, FIRST_SNAIL, castleLeft - FLAT_APPROACH - 20, SNAIL_GAP),
-  )
+  const firstSnail = FIRST_SNAIL + Math.floor(hash(seed, 0, 31) * 20)
+  const lastSnail = castleLeft - FLAT_APPROACH - 20 - SNAIL_WIDTH
+  const snails = settleSnails(heights, spread(seed, 30, firstSnail, lastSnail, SNAIL_GAP))
 
   const columns = Array.from({ length: WIDTH }, (_, column) =>
     Array.from({ length: ROWS }, (_, row) => cellColor(seed, column, row, ROWS, heights[column])),

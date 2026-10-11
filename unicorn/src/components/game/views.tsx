@@ -5,7 +5,7 @@ import type { Pixel } from '../../drawing/types'
 import { SNAIL_FRAMES, SNAIL_SQUISHED, SQUISH_SPREAD } from '../../game/snail'
 import type { Shape } from '../../game/shape'
 import type { Sprite } from '../../game/sprite'
-import type { Field } from '../../game/field'
+import type { Field, Pickup } from '../../game/field'
 import { pickupBottom, pickupShape } from '../../game/pickup'
 import { skyBands, type Sky } from '../../game/sky'
 import { wallBase, wallBlocks, type Wall } from '../../game/wall'
@@ -230,4 +230,44 @@ export function SpriteIcon({ sprite, className = 'h-12' }: { sprite: Sprite; cla
       <PixelRects pixels={sprite.pixels} />
     </svg>
   )
+}
+
+type PickupTallyProps = { pickups: Pickup[]; collected: number[] }
+
+// What's been collected so far, in the corner: each dress, grayed out until it's found, or
+// a count of diamonds.
+export function PickupTally({ pickups, collected }: PickupTallyProps) {
+  const indexed = pickups.map((pickup, i) => ({ pickup, i }))
+  const dresses = indexed.filter(({ pickup }) => pickup.kind === 'dress')
+  const diamonds = indexed.filter(({ pickup }) => pickup.kind === 'diamond')
+  const count = (items: typeof indexed) => items.filter(({ i }) => collected.includes(i)).length
+
+  if (dresses.length > 0) {
+    return (
+      <div
+        className="absolute top-3 right-3 flex gap-2 rounded-2xl bg-indigo-950/85 p-3"
+        role="status"
+        aria-label={`Dresses: ${count(dresses)} of ${dresses.length}`}
+      >
+        {dresses.map(({ pickup, i }) => (
+          <div key={i} className={collected.includes(i) ? '' : 'opacity-40 grayscale'}>
+            <SpriteIcon sprite={pickupShape(pickup)} className="h-8" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+  if (diamonds.length > 0) {
+    return (
+      <div
+        className="absolute top-3 right-3 flex items-center gap-3 rounded-2xl bg-indigo-950/85 px-4 py-3 text-lg font-semibold text-white tabular-nums"
+        role="status"
+        aria-label={`Diamonds: ${count(diamonds)} of ${diamonds.length}`}
+      >
+        <SpriteIcon sprite={pickupShape(diamonds[0].pickup)} className="h-6" />
+        {count(diamonds)} / {diamonds.length}
+      </div>
+    )
+  }
+  return null
 }

@@ -32,8 +32,8 @@ type PlayLoopOptions = {
 }
 
 // Plays one level: reads the keyboard, runs walking, jumping, snail collisions and picking
-// things up, with their sound effects, and
-// publishes whole-cell changes to React, a few times a second while walking.
+// things up, with their sound effects, and publishes whole-cell changes to React, a few
+// times a second while walking.
 export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
   const maxX = Math.max(0, field.width - sprite.width)
   // The unicorn's left edge in whole cells.

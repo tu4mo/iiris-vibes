@@ -1,6 +1,7 @@
+// Named from when it only muted the music; kept so the saved setting still applies.
 const MUTED_KEY = 'unicorn-designer:music-muted'
 
-// Whether the player turned the music off last time. False when storage is unavailable.
+// Whether the player turned the sound off last time. False when storage is unavailable.
 export function loadMuted(): boolean {
   try {
     return localStorage.getItem(MUTED_KEY) === 'true'

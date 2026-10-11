@@ -41,6 +41,9 @@ function run(wave: Wave, notes: string[], each: number, volume: number, last = e
   )
 }
 
+// Up a G major chord, two octaves.
+const SPARKLE = ['G5', 'B5', 'D6', 'G6', 'B6', 'D7']
+
 export const EFFECTS: Record<Effect, Tone[]> = {
   // A quick upward swoop.
   jump: [tone('pulse25', 0, 0.16, 'C5', 0.4, 'C6')],
@@ -54,11 +57,8 @@ export const EFFECTS: Record<Effect, Tone[]> = {
   level: run('pulse25', ['C5', 'E5', 'G5', 'C6', 'E6', 'G6'], 0.07, 0.35, 0.35),
   // A magical sparkle running up two octaves, with a fainter echo.
   dress: [
-    ...run('pulse12', ['G5', 'B5', 'D6', 'G6', 'B6', 'D7'], 0.045, 0.35, 0.2),
-    ...run('pulse12', ['G5', 'B5', 'D6', 'G6', 'B6', 'D7'], 0.045, 0.12, 0.2).map((t) => ({
-      ...t,
-      at: t.at + 0.12,
-    })),
+    ...run('pulse12', SPARKLE, 0.045, 0.35, 0.2),
+    ...run('pulse12', SPARKLE, 0.045, 0.12, 0.2).map((t) => ({ ...t, at: t.at + 0.12 })),
   ],
   // The classic ching: a short note and a higher one that rings.
   diamond: [tone('pulse25', 0, 0.06, 'B5', 0.35), tone('pulse25', 0.06, 0.3, 'E6', 0.35)],

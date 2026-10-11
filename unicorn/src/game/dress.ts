@@ -1,8 +1,7 @@
 import type { TailwindColor } from '../drawing/colors'
-import { cellKey } from '../drawing/grid'
 import type { Pixel } from '../drawing/types'
 import { outlinedPixels, toShapes, type Shape } from './shape'
-import { connectedGroups, findLegs, mostCommon, outlineColor, type Sprite } from './sprite'
+import { connectedGroups, findLegs, mostCommon, outlineColor, recolor, type Sprite } from './sprite'
 
 // Colorful dresses hanging on the castle walls. Jumping into one collects it, and the
 // unicorn puts it on. Coordinates while building the shape: x from the left edge,
@@ -78,7 +77,6 @@ const { shapes } = toShapes(
 // Each style as a dress on its hanger, all the same size.
 export const DRESS_SHAPES: Shape[] = shapes
 export const DRESS_WIDTH = shapes[0].width
-export const DRESS_HEIGHT = shapes[0].height
 
 // The part of the unicorn a dress covers: the body just above the legs, down over the top
 // of the legs like a skirt. It's the connected patch (not crossing the outline) with the
@@ -106,17 +104,12 @@ export function wearDress(sprite: Sprite, style: DressStyle): Sprite {
     topOf.set(x, Math.min(topOf.get(x) ?? y, y))
     bottomOf.set(x, Math.max(bottomOf.get(x) ?? y, y))
   }
-  const colors = new Map(
-    covered.map(({ x, y }) => [
-      cellKey({ x, y }),
-      y === topOf.get(x) || y === bottomOf.get(x) ? style.trim : patternColor(style, x, y),
-    ]),
+  return recolor(
+    sprite,
+    covered.map(({ x, y }) => ({
+      x,
+      y,
+      color: y === topOf.get(x) || y === bottomOf.get(x) ? style.trim : patternColor(style, x, y),
+    })),
   )
-  return {
-    ...sprite,
-    pixels: sprite.pixels.map((p) => {
-      const color = colors.get(cellKey(p))
-      return color ? { ...p, color } : p
-    }),
-  }
 }

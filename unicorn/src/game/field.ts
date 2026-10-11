@@ -1,5 +1,4 @@
 import type { TailwindColor } from '../drawing/colors'
-import { hash } from './random'
 import type { Shape } from './shape'
 import { SNAIL_HEIGHT, SNAIL_WIDTH } from './snail'
 
@@ -38,22 +37,6 @@ export type Field = {
   snails: FieldSnail[]
   // Drawn separately too, since they disappear when collected.
   pickups: Pickup[]
-}
-
-// Snail positions from `from` to `to`, spaced a random distance apart.
-export function placeSnails(
-  seed: number,
-  from: number,
-  to: number,
-  gap: { min: number; max: number },
-) {
-  const lefts: number[] = []
-  let x = from + Math.floor(hash(seed, 0, 30) * 20)
-  for (let i = 1; x + SNAIL_WIDTH < to; i++) {
-    lefts.push(x)
-    x += gap.min + Math.floor(hash(seed, i, 30) * (gap.max - gap.min))
-  }
-  return lefts
 }
 
 // Sets each snail on a flat patch at the highest ground beneath it, flattening `heights`.
