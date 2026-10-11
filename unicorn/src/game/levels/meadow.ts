@@ -6,8 +6,7 @@ import { CLOUDS } from '../sprites/clouds'
 import { RAINBOW_ARC } from '../sprites/rainbow'
 import { fieldColumns, settleSnails, stamp, type Field } from '../field'
 import { hash, pick, spread, valueNoise } from '../random'
-import type { Shape } from '../shape'
-import type { Sky } from '../sky'
+import { DAY_SKY, type Sky } from '../sky'
 import { SNAIL_WIDTH } from '../sprites/snail'
 import type { Level } from './level'
 
@@ -30,23 +29,15 @@ const FLOWERS: TailwindColor[] = ['rose-400', 'amber-300', 'violet-400', 'pink-3
 // placed inside its chunk, so they never overlap.
 const CLOUD_CHUNK = 48
 
-// Draws a shape into `grid` (rows of colors, top first) with its top-left corner at
-// `left`, `top`. Anything outside the grid is cut off.
-function paint(grid: (TailwindColor | null)[][], shape: Shape, left: number, top: number) {
-  for (const { x, y, color } of shape.pixels) {
-    if (grid[top + y] && left + x >= 0 && left + x < grid[0].length) grid[top + y][left + x] = color
-  }
-}
-
-function drawClouds(seed: number, grid: (TailwindColor | null)[][]) {
-  const width = grid[0].length
+function drawClouds(seed: number, columns: (TailwindColor | null)[][]) {
+  const width = columns.length
   for (let c = 0; c * CLOUD_CHUNK < width; c++) {
     if (hash(seed, c, 10) > 0.65) continue
     const cloud = pick(CLOUDS, hash(seed, c, 12))
     // Where the cloud's flat bottom is, in rows from the top.
     const bottom = 25 + Math.floor(hash(seed, c, 11) * 14)
     const left = c * CLOUD_CHUNK + Math.floor(hash(seed, c, 13) * (CLOUD_CHUNK - cloud.width))
-    paint(grid, cloud, left, bottom - cloud.height)
+    stamp(columns, cloud, left, columns[0].length - bottom)
   }
 }
 
@@ -79,18 +70,6 @@ function cellColor(
   return null
 }
 
-// A clear day sky from deep blue at the top to pale blue at the horizon.
-const DAY_SKY: Sky = [
-  'blue-500',
-  'blue-400',
-  'blue-300',
-  'sky-300',
-  'sky-200',
-  'cyan-100',
-  'sky-100',
-  'blue-50',
-]
-
 // Evening near the castle: dusky violet at the top, red and orange at the horizon.
 const DUSK_SKY: Sky = [
   'indigo-600',
@@ -106,10 +85,12 @@ const DUSK_SKY: Sky = [
 // The backdrop behind the field: clouds, and a big rainbow in the middle in front of them,
 // standing at the bottom.
 function generateBackdrop(seed: number, width: number, rows: number): Pixel[] {
-  const grid = Array.from({ length: rows }, () => Array<TailwindColor | null>(width).fill(null))
-  drawClouds(seed, grid)
-  paint(grid, RAINBOW_ARC, Math.floor(width / 2) - RAINBOW_ARC.width / 2, rows - RAINBOW_ARC.height)
-  return grid.flatMap((row, y) => row.flatMap((color, x) => (color ? [{ x, y, color }] : [])))
+  const columns = fieldColumns(width, rows, () => null)
+  drawClouds(seed, columns)
+  stamp(columns, RAINBOW_ARC, Math.floor(width / 2) - RAINBOW_ARC.width / 2, 0)
+  return columns.flatMap((column, x) =>
+    column.flatMap((color, y) => (color ? [{ x, y, color }] : [])),
+  )
 }
 
 // The castle stands near the right end, on flat ground that starts a little before it.

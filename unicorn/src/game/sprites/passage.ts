@@ -1,9 +1,9 @@
 import type { TailwindColor } from '../../drawing/colors'
 import { pixelArt } from '../../drawing/pixelArt'
-import type { Shape } from '../shape'
+import type { Shape } from '../../drawing/types'
 
 // The secret passage: a pitch-black arch (b) with loose dark stones (s) around its edge.
-const PASSAGE_COLORS: Record<string, TailwindColor> = {
+const COLORS: Record<string, TailwindColor> = {
   k: 'indigo-950',
   b: 'black',
   s: 'stone-600',
@@ -57,5 +57,5 @@ export const PASSAGE: Shape = pixelArt(
   kssbbbbbbbbbbbbbbbbbbbbbbbbbbssk
   kbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbk
   `,
-  (char) => PASSAGE_COLORS[char],
+  COLORS,
 )

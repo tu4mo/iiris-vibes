@@ -7,7 +7,7 @@ import {
   UNICORN_EYE_OPEN,
   UNICORN_HAIR,
 } from '../game/sprites/unicorn'
-import type { Shape } from '../game/shape'
+import type { Shape } from '../drawing/types'
 
 // The layer the pencil and eraser work on, above the built-in unicorn, so the user's
 // drawing never changes the preset layers.

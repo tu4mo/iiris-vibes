@@ -1,7 +1,7 @@
 import type { TailwindColor } from '../../drawing/colors'
 import type { Pixel } from '../../drawing/types'
 import { pixelArt } from '../../drawing/pixelArt'
-import type { Shape } from '../shape'
+import type { Shape } from '../../drawing/types'
 import {
   connectedGroups,
   findLegs,
@@ -42,10 +42,10 @@ function patternColor(style: DressStyle, x: number, row: number): TailwindColor 
   return style.main
 }
 
-// A dress on its hanger: the hook and hanger (h), the bodice with puffed sleeves (M, the
-// main color), the sash and hem (T, the trim), the skirt (p, in the style's pattern), and
-// the outline (k).
-const DRESS = `
+// A dress on its hanger: the hook and hanger (h), the bodice with puffed sleeves and the
+// skirt (M, the main color), the sash and hem (T, the trim), the skirt's dots or stripes
+// (A, the accent), and the outline (k).
+const DOTS = `
   ........k......
   .......khk.....
   ......khkhk....
@@ -61,30 +61,54 @@ const DRESS = `
   ...kMMMMMMMk...
   ....kMMMMMk....
   ....kTTTTTk....
-  ...kpppppppk...
-  ...kpppppppk...
-  ...kpppppppk...
-  ..kpppppppppk..
-  ..kpppppppppk..
-  ..kpppppppppk..
-  .kpppppppppppk.
-  .kpppppppppppk.
+  ...kMMMMMMMk...
+  ...kMMAMMMAk...
+  ...kMMMMMMMk...
+  ..kMMMMMMMMMk..
+  ..kMAMMMAMMMk..
+  ..kMMMMMMMMMk..
+  .kMMMMMMMMMMMk.
+  .kAMMMAMMMAMMk.
   kTTTTTTTTTTTTTk
 `
 
-// A drawn cell's color in a style. Skirt rows count up from the hem.
-function dressColor(style: DressStyle, char: string, x: number, u: number): TailwindColor {
-  if (char === 'k') return 'indigo-950'
-  if (char === 'h') return 'slate-400'
-  if (char === 'T') return style.trim
-  // The pattern lines up with the dress inside its outline.
-  if (char === 'p') return patternColor(style, x - 1, u)
-  return style.main
-}
+const STRIPES = `
+  ........k......
+  .......khk.....
+  ......khkhk....
+  ......khkk.....
+  ......khk......
+  .....khkhk.....
+  ....khk.khk....
+  ...khk...khk...
+  ..khkkkkkkkhk..
+  .khhhhhhhhhhhk.
+  ..kkMMkkkMMkk..
+  ..kMMMMMMMMMk..
+  ...kMMMMMMMk...
+  ....kMMMMMk....
+  ....kTTTTTk....
+  ...kMMMMMMMk...
+  ...kAAAAAAAk...
+  ...kMMMMMMMk...
+  ..kMMMMMMMMMk..
+  ..kAAAAAAAAAk..
+  ..kMMMMMMMMMk..
+  .kMMMMMMMMMMMk.
+  .kAAAAAAAAAAAk.
+  kTTTTTTTTTTTTTk
+`
 
-// Each style as a dress on its hanger, all the same size.
+// Each style as a dress on its hanger, all the same size. A plain skirt is the striped
+// one with no accent color.
 export const DRESS_SHAPES: Shape[] = DRESS_STYLES.map((style) =>
-  pixelArt(DRESS, (char, x, u) => dressColor(style, char, x, u)),
+  pixelArt(style.pattern === 'dots' ? DOTS : STRIPES, {
+    k: 'indigo-950',
+    h: 'slate-400',
+    M: style.main,
+    T: style.trim,
+    A: style.pattern === 'plain' ? style.main : style.accent,
+  }),
 )
 export const DRESS_WIDTH = DRESS_SHAPES[0].width
 

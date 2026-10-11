@@ -1,6 +1,8 @@
 import type { TailwindColor } from '../../drawing/colors'
 import { pixelArt } from '../../drawing/pixelArt'
-import type { Shape } from '../shape'
+import type { Shape } from '../../drawing/types'
+import { DAY_SKY } from '../sky'
+import { RAINBOW_COLORS } from './rainbow'
 
 // The cave's way out: an arch looking onto the sunny field from the first level, with a
 // rim of rock lit by the daylight (L, and D on the outside). Through it are the day sky
@@ -10,19 +12,13 @@ import type { Shape } from '../shape'
 const COLORS: Record<string, TailwindColor> = {
   L: 'stone-300',
   D: 'stone-500',
-  '3': 'blue-300',
-  '4': 'sky-300',
-  '5': 'sky-200',
-  '6': 'cyan-100',
-  '7': 'sky-100',
-  '8': 'blue-50',
-  r: 'red-400',
-  o: 'orange-400',
-  a: 'amber-300',
-  g: 'green-400',
-  s: 'sky-400',
-  i: 'indigo-400',
-  v: 'violet-400',
+  '3': DAY_SKY[2],
+  '4': DAY_SKY[3],
+  '5': DAY_SKY[4],
+  '6': DAY_SKY[5],
+  '7': DAY_SKY[6],
+  '8': DAY_SKY[7],
+  ...RAINBOW_COLORS,
   G: 'green-500',
   H: 'green-600',
   l: 'lime-400',
@@ -90,5 +86,5 @@ export const CAVE_OPENING: Shape = pixelArt(
   ..llllllllllllllllllllllllllllllllllllllll..
   ..GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG..
   `,
-  (char) => COLORS[char],
+  COLORS,
 )

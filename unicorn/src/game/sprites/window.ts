@@ -1,10 +1,10 @@
 import type { TailwindColor } from '../../drawing/colors'
 import { pixelArt } from '../../drawing/pixelArt'
-import type { Shape } from '../shape'
+import type { Shape } from '../../drawing/types'
 
 // A tall arched window onto the night: a stone frame (F), a cross of leading (L), and
 // stars (*) in a sky that darkens toward the top (v, m, n).
-const WINDOW_COLORS: Record<string, TailwindColor> = {
+const COLORS: Record<string, TailwindColor> = {
   k: 'indigo-950',
   F: 'stone-400',
   L: 'stone-500',
@@ -48,5 +48,5 @@ export const WINDOW: Shape = pixelArt(
   kFvvvvvLvvvvvFk
   kFFFFFFFFFFFFFk
   `,
-  (char) => WINDOW_COLORS[char],
+  COLORS,
 )

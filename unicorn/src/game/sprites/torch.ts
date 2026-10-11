@@ -1,9 +1,9 @@
 import type { TailwindColor } from '../../drawing/colors'
 import { pixelArt } from '../../drawing/pixelArt'
-import type { Shape } from '../shape'
+import type { Shape } from '../../drawing/types'
 
 // A torch in an iron bracket.
-const TORCH_COLORS: Record<string, TailwindColor> = {
+const COLORS: Record<string, TailwindColor> = {
   k: 'indigo-950',
   r: 'red-500',
   Y: 'amber-300',
@@ -29,5 +29,5 @@ export const TORCH: Shape = pixelArt(
   kSSSk
   kSSSk
   `,
-  (char) => TORCH_COLORS[char],
+  COLORS,
 )

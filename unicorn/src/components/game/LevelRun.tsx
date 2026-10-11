@@ -1,10 +1,11 @@
 import { useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { cssColor } from '../../drawing/colors'
+import { cellKey } from '../../drawing/grid'
 import type { Drawing } from '../../drawing/types'
 import { DRESS_STYLES, wearDress } from '../../game/sprites/dress'
 import type { Level } from '../../game/levels'
 import { clamp, smoothstep } from '../../game/math'
-import { spriteFromDrawing, walkFrames, type Sprite } from '../../game/sprites/unicorn'
+import { recolor, spriteFromDrawing, walkFrames } from '../../game/sprites/unicorn'
 import { withEyeClosed } from '../../presets/defaultDrawing'
 import { MusicOffIcon, MusicOnIcon, PencilIcon } from '../icons'
 import { START_X, usePlayLoop } from './usePlayLoop'
@@ -69,8 +70,13 @@ export function LevelRun({
   const [seed] = useState(() => Math.floor(Math.random() * 2 ** 31))
   const [field] = useState(() => level.generate(seed))
   const sprite = useMemo(() => spriteFromDrawing(drawing), [drawing])
-  // The same unicorn with its eye closed, switched in for blinking.
-  const blinkSprite = useMemo(() => spriteFromDrawing(withEyeClosed(drawing)), [drawing])
+  // What changes when the eye closes: the closed eye's pixels, in the sprite's cells.
+  const closedEye = useMemo(() => {
+    const open = new Map(sprite.pixels.map((p) => [cellKey(p), p.color]))
+    return spriteFromDrawing(withEyeClosed(drawing)).pixels.filter(
+      (p) => open.get(cellKey(p)) !== p.color,
+    )
+  }, [drawing, sprite])
   // The physics only needs the shape, which a dress doesn't change.
   const steps = useMemo(() => walkFrames(sprite), [sprite])
 
@@ -83,12 +89,15 @@ export function LevelRun({
     collected.map((i) => field.pickups[i]).findLast((p) => p.kind === 'dress')?.style ?? dress
   const looks = useMemo(() => {
     // Standing and the two steps, wearing the dress.
-    function poses(unicorn: Sprite) {
-      const worn = wornStyle === null ? unicorn : wearDress(unicorn, DRESS_STYLES[wornStyle])
-      return { standing: worn, steps: walkFrames(worn) }
+    const worn = wornStyle === null ? sprite : wearDress(sprite, DRESS_STYLES[wornStyle])
+    const open = { standing: worn, steps: wornStyle === null ? steps : walkFrames(worn) }
+    // Blinking switches to the same poses with the eye closed.
+    const blinking = {
+      standing: recolor(open.standing, closedEye),
+      steps: open.steps.map((f) => recolor(f, closedEye)),
     }
-    return { open: poses(sprite), blinking: poses(blinkSprite) }
-  }, [sprite, blinkSprite, wornStyle])
+    return { open, blinking }
+  }, [sprite, steps, closedEye, wornStyle])
 
   const handleExit = useEffectEvent(() => onExit(wornStyle))
   useEffect(() => {

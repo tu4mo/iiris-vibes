@@ -1,5 +1,5 @@
 import type { TailwindColor } from '../drawing/colors'
-import type { Shape } from './shape'
+import type { Shape } from '../drawing/types'
 import { SNAIL_HEIGHT, SNAIL_WIDTH } from './sprites/snail'
 
 // The ground a level is played on, generated column by column before the level starts.

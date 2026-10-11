@@ -2,17 +2,15 @@ import type { TailwindColor } from '../../drawing/colors'
 import { cellKey, type Cell } from '../../drawing/grid'
 import { compositePixels } from '../../drawing/layers'
 import { pixelArt } from '../../drawing/pixelArt'
-import type { Drawing, Pixel } from '../../drawing/types'
-import { SIDES, type Shape } from '../shape'
+import type { Drawing, Pixel, Shape } from '../../drawing/types'
 
 // The unicorn in the game: a shape cropped from the drawing.
 export type Sprite = Shape
 
 // The built-in unicorn, sampled 1:1 from the reference image, with each color snapped to
-// the nearest Tailwind palette color. It's drawn in layers, so the hair can be
-// restyled on its own and the eye can blink; all are drawn in the same frame, so they line up. The editor
-// starts from these (see presets/defaultDrawing.ts), and the game turns whatever is drawn
-// into the sprite it plays with (spriteFromDrawing).
+// the nearest Tailwind palette color. It's drawn in layers, so the hair can be restyled
+// on its own and the eye can blink; all are drawn in the same frame, so they line up.
+// The editor starts from these (see presets/defaultDrawing.ts).
 const COLORS: Record<string, TailwindColor> = {
   k: 'indigo-950',
   W: 'white',
@@ -117,10 +115,10 @@ const EYE_CLOSED = `
   kkk
 `
 
-export const UNICORN_BODY: Shape = pixelArt(BODY, (char) => COLORS[char])
-export const UNICORN_HAIR: Shape = pixelArt(HAIR, (char) => COLORS[char])
-export const UNICORN_EYE_OPEN: Shape = pixelArt(EYE_OPEN, (char) => COLORS[char])
-export const UNICORN_EYE_CLOSED: Shape = pixelArt(EYE_CLOSED, (char) => COLORS[char])
+export const UNICORN_BODY: Shape = pixelArt(BODY, COLORS)
+export const UNICORN_HAIR: Shape = pixelArt(HAIR, COLORS)
+export const UNICORN_EYE_OPEN: Shape = pixelArt(EYE_OPEN, COLORS)
+export const UNICORN_EYE_CLOSED: Shape = pixelArt(EYE_CLOSED, COLORS)
 
 // The designed unicorn as a sprite: every visible layer, cropped tight.
 export function spriteFromDrawing(drawing: Drawing): Sprite {
@@ -134,6 +132,14 @@ export function spriteFromDrawing(drawing: Drawing): Sprite {
     pixels: pixels.map((p) => ({ x: p.x - minX, y: p.y - minY, color: p.color })),
   }
 }
+
+// The four edge neighbours of a cell.
+export const SIDES = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+] as const
 
 // The cell next to `cell` in direction [dx, dy].
 const step = (cell: Cell, [dx, dy]: readonly [number, number]) => ({
@@ -239,8 +245,8 @@ function edgeTest(sprite: Sprite): (p: Pixel) => boolean {
 }
 
 // The outline's color: the most common color around the sprite's edge.
-export function outlineColor(sprite: Sprite, isEdge = edgeTest(sprite)) {
-  return mostCommon(sprite.pixels.filter(isEdge).map((p) => p.color))
+export function outlineColor(sprite: Sprite) {
+  return mostCommon(sprite.pixels.filter(edgeTest(sprite)).map((p) => p.color))
 }
 
 // The sprite with some of its pixels painted over in new colors. Cells it doesn't already

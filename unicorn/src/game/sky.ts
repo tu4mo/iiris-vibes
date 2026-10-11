@@ -15,3 +15,15 @@ export function skyBands(rows: number, sky: Sky): SkyBand[] {
     bottom: i < sky.length - 1 ? (i + 1) * bandHeight : Math.max(rows, i * bandHeight),
   }))
 }
+
+// A clear day sky from deep blue at the top to pale blue at the horizon.
+export const DAY_SKY: Sky = [
+  'blue-500',
+  'blue-400',
+  'blue-300',
+  'sky-300',
+  'sky-200',
+  'cyan-100',
+  'sky-100',
+  'blue-50',
+]

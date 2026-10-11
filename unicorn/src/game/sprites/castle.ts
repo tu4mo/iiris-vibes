@@ -1,6 +1,6 @@
 import type { TailwindColor } from '../../drawing/colors'
 import { pixelArt } from '../../drawing/pixelArt'
-import type { Shape } from '../shape'
+import type { Shape } from '../../drawing/types'
 
 // A pixel-art castle at the end of the meadow: two side towers and a center tower rising
 // from a crenellated keep, each with its own pastel bricks and mortar, a striped cone
@@ -112,7 +112,7 @@ export const CASTLE: Shape = pixelArt(
   kxwvvvvwxvvvwvvmpqppppmppAaddddddddddddddddddddddddddddddddaApqpmppqpppxwvvvvwxvvvwvvk
   kxvvvvwvxvvwvvvmqppppqmppAaddddddddddddddddddddddddddddddddaAqppmpqppppxvvvvwvxvvwvvvk
   `,
-  (char) => COLORS[char],
+  COLORS,
 )
 
 // The doorway's left column in the drawing: walking past it into the castle finishes the

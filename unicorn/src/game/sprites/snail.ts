@@ -1,6 +1,6 @@
 import type { TailwindColor } from '../../drawing/colors'
 import { pixelArt } from '../../drawing/pixelArt'
-import type { Shape } from '../shape'
+import type { Shape } from '../../drawing/types'
 
 // A pixel-art snail facing left (toward the approaching unicorn): a foot along the
 // ground (f) with a head rising at the front (b), two eye stalks topped with eyes, and a
@@ -14,9 +14,9 @@ const COLORS: Record<string, TailwindColor> = {
   s: 'pink-400',
   S: 'fuchsia-600',
 }
-const snail = (text: string): Shape => pixelArt(text, (char) => COLORS[char])
 
-const UPRIGHT = snail(`
+const UPRIGHT = pixelArt(
+  `
   .......kkkkk...
   ..k.k.ksssssk..
   .kkkkkssSSSSsk.
@@ -26,10 +26,13 @@ const UPRIGHT = snail(`
   .kbbbkSssssSSk.
   .kbbbbbSSSSSbbk
   .kffffffffffffk
-`)
+`,
+  COLORS,
+)
 
 // Both horns leaning forward.
-const LEANING = snail(`
+const LEANING = pixelArt(
+  `
   .......kkkkk...
   .k.k..ksssssk..
   kkkkkkssSSSSsk.
@@ -39,10 +42,13 @@ const LEANING = snail(`
   .kbbbkSssssSSk.
   .kbbbbbSSSSSbbk
   .kffffffffffffk
-`)
+`,
+  COLORS,
+)
 
 // Only the front horn leaning forward.
-const FRONT_LEANING = snail(`
+const FRONT_LEANING = pixelArt(
+  `
   .......kkkkk...
   .k..k.ksssssk..
   kkkkkkssSSSSsk.
@@ -52,10 +58,13 @@ const FRONT_LEANING = snail(`
   .kbbbkSssssSSk.
   .kbbbbbSSSSSbbk
   .kffffffffffffk
-`)
+`,
+  COLORS,
+)
 
 // Both horns pulled in a little.
-const PULLED_IN = snail(`
+const PULLED_IN = pixelArt(
+  `
   .......kkkkk...
   ......ksssssk..
   ..k.kkssSSSSsk.
@@ -65,7 +74,9 @@ const PULLED_IN = snail(`
   .kbbbkSssssSSk.
   .kbbbbbSSSSSbbk
   .kffffffffffffk
-`)
+`,
+  COLORS,
+)
 
 // The horns' slow wiggle, a pose per frame: upright, both leaning forward, upright, only
 // the front one leaning, then a twitch down (the squished snail is made from this last
@@ -77,10 +88,13 @@ export const SNAIL_HEIGHT = UPRIGHT.height
 // The snail flattened for a moment after being jumped on, horns pulled in. It's a cell
 // wider on each side, so it's drawn SQUISH_SPREAD left of the snail.
 export const SQUISH_SPREAD = 1
-export const SNAIL_SQUISHED = snail(`
+export const SNAIL_SQUISHED = pixelArt(
+  `
   ........kkkkkk...
   ..k..kkssSSSSSsk.
   .kfkkfksSssSssSk.
   .kbbbbkSssssSSSk.
   .kffffffffffffffk
-`)
+`,
+  COLORS,
+)

@@ -1,6 +1,6 @@
 import type { TailwindColor } from '../../drawing/colors'
 import { pixelArt } from '../../drawing/pixelArt'
-import type { Shape } from '../shape'
+import type { Shape } from '../../drawing/types'
 
 // Cut gems to collect in the cave.
 
@@ -37,5 +37,5 @@ export const DIAMOND_SHAPES: Shape[] = DIAMOND_STYLES.map((style) => {
     m: style.mid,
     d: style.dark,
   }
-  return pixelArt(DIAMOND, (char) => colors[char])
+  return pixelArt(DIAMOND, colors)
 })

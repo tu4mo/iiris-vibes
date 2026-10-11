@@ -1,10 +1,10 @@
 import type { TailwindColor } from '../../drawing/colors'
 import { pixelArt } from '../../drawing/pixelArt'
-import type { Shape } from '../shape'
+import type { Shape } from '../../drawing/types'
 
 // The big rainbow behind the meadow: seven bands, red on the outside to violet on the
 // inside, cut off flat where it meets the bottom of the sky behind the hills.
-const COLORS: Record<string, TailwindColor> = {
+export const RAINBOW_COLORS: Record<string, TailwindColor> = {
   r: 'red-400',
   o: 'orange-400',
   a: 'amber-300',
@@ -103,5 +103,5 @@ export const RAINBOW_ARC: Shape = pixelArt(
   .rrroooaaagggsssiiivvvv..................................................................................................vvvviiisssgggaaaooorrr.
   .rrroooaaaggggsssiiivvv..................................................................................................vvviiisssggggaaaooorrr.
   `,
-  (char) => COLORS[char],
+  RAINBOW_COLORS,
 )
