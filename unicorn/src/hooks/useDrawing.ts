@@ -7,14 +7,24 @@ import type { Drawing } from '../drawing/types'
 import { USER_LAYER_ID, defaultDrawing, normalizeDrawing } from '../presets/defaultDrawing'
 import { applyHairStyle, type HairStyle } from '../presets/hairStyles'
 
+const SAVE_DELAY = 300 // ms
+
 // The drawing being edited, persisted to localStorage, with the edits the UI can make.
 export function useDrawing() {
   const [drawing, setDrawing] = useState<Drawing>(() =>
     normalizeDrawing(loadDrawing() ?? defaultDrawing),
   )
 
+  // Saved a moment after the last change, so a stroke isn't serialized on every move, and
+  // straight away if the page is closed before then.
   useEffect(() => {
-    saveDrawing(drawing)
+    const save = () => saveDrawing(drawing)
+    const timer = setTimeout(save, SAVE_DELAY)
+    window.addEventListener('pagehide', save)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('pagehide', save)
+    }
   }, [drawing])
 
   function paint(cells: Cell[], tool: PaintTool, color: TailwindColor) {

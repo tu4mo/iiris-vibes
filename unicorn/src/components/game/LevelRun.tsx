@@ -3,6 +3,7 @@ import { cssColor } from '../../drawing/colors'
 import type { Drawing } from '../../drawing/types'
 import { DRESS_STYLES, wearDress } from '../../game/dress'
 import type { Level } from '../../game/levels'
+import { clamp, smoothstep } from '../../game/math'
 import { findEye, recolor, spriteFromDrawing, walkFrames } from '../../game/sprite'
 import { MusicOffIcon, MusicOnIcon, PencilIcon } from '../icons'
 import { START_X, usePlayLoop } from './usePlayLoop'
@@ -38,6 +39,15 @@ type LevelRunProps = {
   fadeIn: boolean
   muted: boolean
   onToggleMuted: () => void
+}
+
+// The color above the field, for windows taller than it: the ceiling indoors, or the top
+// of the sky, fading toward the exit's sky as the level goes on.
+function topColor(scenery: Level['scenery'], progress: number) {
+  if (scenery.kind === 'indoors') return cssColor(scenery.wall.ceiling)
+  const start = cssColor(scenery.sky[0])
+  if (!scenery.skyAtExit) return start
+  return `color-mix(in oklch, ${start}, ${cssColor(scenery.skyAtExit[0])} ${progress * 100}%)`
 }
 
 // One play of a level, on a field generated for it. Remounted (with a new key) to play
@@ -91,15 +101,14 @@ export function LevelRun({
   // Follow the unicorn, but stop at the field's ends (or center a field narrower than the window).
   const ideal = x + Math.floor(sprite.width / 2) - Math.floor(cols / 2)
   const cameraX =
-    field.width <= cols
-      ? Math.floor((field.width - cols) / 2)
-      : Math.min(field.width - cols, Math.max(0, ideal))
+    field.width <= cols ? Math.floor((field.width - cols) / 2) : clamp(ideal, 0, field.width - cols)
 
   // The backdrop covers the window plus how far it scrolls, so its middle is in view
   // mid-journey. Offsets snap to whole cells to keep the grid aligned.
   const backdropWidth = cols + Math.ceil(Math.max(0, field.width - cols) * PARALLAX)
-  const outdoors = level.scenery.kind === 'outdoors' ? level.scenery : null
-  const indoors = level.scenery.kind === 'indoors' ? level.scenery : null
+  const { scenery } = level
+  const outdoors = scenery.kind === 'outdoors' ? scenery : null
+  const indoors = scenery.kind === 'indoors' ? scenery : null
   const backdrop = useMemo(
     () => outdoors?.backdrop?.(seed, backdropWidth, field.rows) ?? null,
     [outdoors, seed, backdropWidth, field.rows],
@@ -108,14 +117,7 @@ export function LevelRun({
 
   // How far along the level is: 0 at the start, 1 at the exit, eased in and out. Outdoors,
   // the sky and the shade over the land change with it.
-  const journey = Math.min(1, Math.max(0, (x - START_X) / (field.exit - START_X)))
-  const progress = journey * journey * (3 - 2 * journey)
-  // The color above the field, for windows taller than it.
-  const topColor = !outdoors
-    ? cssColor(indoors!.wall.ceiling)
-    : outdoors.skyAtExit
-      ? `color-mix(in oklch, ${cssColor(outdoors.sky[0])}, ${cssColor(outdoors.skyAtExit[0])} ${progress * 100}%)`
-      : cssColor(outdoors.sky[0])
+  const progress = smoothstep(clamp((x - START_X) / (field.exit - START_X), 0, 1))
 
   const poses = blink && looks.blinking ? looks.blinking : looks
   const shown = step === null ? poses.standing : poses.steps[step]
@@ -126,7 +128,7 @@ export function LevelRun({
     <main
       ref={containerRef}
       className="relative h-dvh overflow-hidden"
-      style={{ backgroundColor: topColor }}
+      style={{ backgroundColor: topColor(scenery, progress) }}
       aria-label="Game"
     >
       {/* Nothing is drawn until the window has been measured. */}

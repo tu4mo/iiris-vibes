@@ -138,6 +138,26 @@ export const WallView = memo(function WallView({ wall, seed, width, rows, cell }
   )
 })
 
+type PlacedShapeProps = { shape: Shape; left: number; bottom: number; rows: number; cell: number }
+
+// A shape whose bottom is `bottom` cells up from the bottom of a field `rows` tall.
+const PlacedShape = memo(function PlacedShape({
+  shape,
+  left,
+  bottom,
+  rows,
+  cell,
+}: PlacedShapeProps) {
+  return (
+    <div
+      className="absolute"
+      style={{ left: left * cell, top: (rows - bottom - shape.height) * cell }}
+    >
+      <PixelDivs pixels={shape.pixels} cell={cell} />
+    </div>
+  )
+})
+
 type PickupsProps = { field: Field; cell: number; spriteHeight: number; collected: number[] }
 
 // The dresses and diamonds not collected yet.
@@ -147,35 +167,17 @@ export const Pickups = memo(function Pickups({
   spriteHeight,
   collected,
 }: PickupsProps) {
-  return field.pickups.map((pickup, i) => {
-    if (collected.includes(i)) return null
-    const shape = pickupShape(pickup)
-    return (
-      <div
+  return field.pickups.map((pickup, i) =>
+    collected.includes(i) ? null : (
+      <PlacedShape
         key={i}
-        className="absolute"
-        style={{
-          left: pickup.left * cell,
-          top: (field.rows - pickupBottom(pickup, spriteHeight) - shape.height) * cell,
-        }}
-      >
-        <PixelDivs pixels={shape.pixels} cell={cell} />
-      </div>
-    )
-  })
-})
-
-type SnailProps = { shape: Shape; left: number; ground: number; rows: number; cell: number }
-
-// One snail, standing on the ground `ground` cells up from the bottom of a field `rows` tall.
-const Snail = memo(function Snail({ shape, left, ground, rows, cell }: SnailProps) {
-  return (
-    <div
-      className="absolute"
-      style={{ left: left * cell, top: (rows - ground - shape.height) * cell }}
-    >
-      <PixelDivs pixels={shape.pixels} cell={cell} />
-    </div>
+        shape={pickupShape(pickup)}
+        left={pickup.left}
+        bottom={pickupBottom(pickup, spriteHeight)}
+        rows={field.rows}
+        cell={cell}
+      />
+    ),
   )
 })
 
@@ -187,11 +189,11 @@ export const Snails = memo(function Snails({ field, cell, tick, squished }: Snai
   return field.snails.map((snail, i) => {
     const isSquished = squished.includes(i)
     return (
-      <Snail
+      <PlacedShape
         key={i}
         shape={isSquished ? SNAIL_SQUISHED : SNAIL_FRAMES[(tick + i * 2) % SNAIL_FRAMES.length]}
         left={isSquished ? snail.left - SQUISH_SPREAD : snail.left}
-        ground={snail.ground}
+        bottom={snail.ground}
         rows={field.rows}
         cell={cell}
       />

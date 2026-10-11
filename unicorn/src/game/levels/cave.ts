@@ -1,12 +1,12 @@
 import { CAVE_SONG } from '../../audio/songs'
 import type { TailwindColor } from '../../drawing/colors'
 import { DIAMOND_SHAPES } from '../diamond'
-import type { Field, Pickup } from '../field'
+import { fieldColumns, type Field, type Pickup } from '../field'
 import { hash, pick, spread, valueNoise } from '../random'
+import { clamp } from '../math'
 import { archDepth } from '../shape'
-import { skyBands } from '../sky'
+import { DAY_SKY, rainbowColor, skyColorAt } from '../sky'
 import type { Level } from './level'
-import { DAY_SKY, RAINBOW } from './meadow'
 
 // The third level, through the castle's secret passage: a dark cave with rocky ups and
 // downs and diamonds along the way. At the far end, an opening looks out on the sunny
@@ -38,7 +38,7 @@ const CRYSTALS: TailwindColor[] = ['cyan-300', 'violet-400', 'fuchsia-400']
 // out before the opening.
 function groundHeight(seed: number, column: number) {
   const rocky = 10 + valueNoise(seed, column, 18, 70) * 14 + valueNoise(seed, column, 6, 71) * 3
-  const t = Math.min(1, Math.max(0, (column - LEVEL_OUT.from) / LEVEL_OUT.over))
+  const t = clamp((column - LEVEL_OUT.from) / LEVEL_OUT.over, 0, 1)
   return Math.round(rocky * (1 - t) + OPENING_GROUND * t)
 }
 
@@ -83,8 +83,7 @@ function rockColor(
 // slice of the rainbow and green hills, and a daylit rim of rock around its edge.
 function paintOpening(seed: number, columns: (TailwindColor | null)[][]) {
   const floorRow = ROWS - OPENING_GROUND
-  const bands = skyBands(ROWS, DAY_SKY)
-  const rainbow = { x: OPENING.width / 2 + 12, u: -6, outer: 34 }
+  const rainbow = { center: { x: OPENING.width / 2 + 12, y: -6 }, outer: 34, bandWidth: 2 }
 
   for (let x = -2; x < OPENING.width + 2; x++) {
     const column = columns[OPENING_LEFT + x]
@@ -98,9 +97,6 @@ function paintOpening(seed: number, columns: (TailwindColor | null)[][]) {
         column[row] = depth > -1 ? 'stone-300' : 'stone-500'
         continue
       }
-      const band = Math.floor(
-        (rainbow.outer - Math.hypot(x + 0.5 - rainbow.x, u + 0.5 - rainbow.u)) / 2,
-      )
       if (u < hill) {
         const flower = hash(seed, x, 78)
         column[row] =
@@ -109,8 +105,11 @@ function paintOpening(seed: number, columns: (TailwindColor | null)[][]) {
               ? 'rose-400'
               : 'lime-400'
             : pick(['green-500', 'green-600'], hash(seed, x, u))
-      } else if (band >= 0 && band < RAINBOW.length) column[row] = RAINBOW[band]
-      else column[row] = bands.find((b) => row >= b.top && row < b.bottom)?.color ?? DAY_SKY.at(-1)!
+      } else {
+        column[row] =
+          rainbowColor(rainbow.center, rainbow.outer, rainbow.bandWidth, x, u) ??
+          skyColorAt(ROWS, DAY_SKY, row)
+      }
     }
     // Grass grows on the floor in the sunlight.
     if (x >= 0 && x < OPENING.width) {
@@ -140,12 +139,10 @@ function placeDiamonds(seed: number, heights: number[]): Pickup[] {
 
 function generateField(seed: number): Field {
   const heights = Array.from({ length: WIDTH }, (_, column) => groundHeight(seed, column))
-  const columns = Array.from({ length: WIDTH }, (_, column) => {
-    const ceiling = ceilingDepth(seed, column)
-    return Array.from({ length: ROWS }, (_, row) =>
-      rockColor(seed, column, row, heights[column], ceiling),
-    )
-  })
+  const ceilings = heights.map((_, column) => ceilingDepth(seed, column))
+  const columns = fieldColumns(WIDTH, ROWS, (column, row) =>
+    rockColor(seed, column, row, heights[column], ceilings[column]),
+  )
   paintOpening(seed, columns)
 
   return {
@@ -160,8 +157,6 @@ function generateField(seed: number): Field {
 }
 
 export const CAVE: Level = {
-  width: WIDTH,
-  rows: ROWS,
   generate: generateField,
   scenery: {
     kind: 'indoors',

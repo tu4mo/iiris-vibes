@@ -1,7 +1,7 @@
 import { CASTLE_SONG } from '../../audio/songs'
 import type { TailwindColor } from '../../drawing/colors'
 import { DRESS_STYLES, DRESS_WIDTH } from '../dress'
-import { stamp, type Field, type Pickup } from '../field'
+import { fieldColumns, stamp, type Field, type Pickup } from '../field'
 import { hash, spread } from '../random'
 import { archDepth, outlinedShape, type Shape } from '../shape'
 import type { Level } from './level'
@@ -78,9 +78,7 @@ function passageShape(seed: number): Shape {
 
 function generateField(seed: number): Field {
   const heights = Array.from({ length: WIDTH }, () => FLOOR)
-  const columns = Array.from({ length: WIDTH }, (_, column) =>
-    Array.from({ length: ROWS }, (_, row) => floorColor(column, row)),
-  )
+  const columns = fieldColumns(WIDTH, ROWS, floorColor)
 
   // Dresses up to a little before the passage, each style in turn from a random start.
   const firstStyle = Math.floor(hash(seed, 0, 40) * DRESS_STYLES.length)
@@ -118,8 +116,6 @@ function generateField(seed: number): Field {
 }
 
 export const CASTLE_HALL: Level = {
-  width: WIDTH,
-  rows: ROWS,
   generate: generateField,
   scenery: {
     kind: 'indoors',

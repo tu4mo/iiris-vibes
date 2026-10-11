@@ -39,6 +39,17 @@ export type Field = {
   pickups: Pickup[]
 }
 
+// A field's colors, column by column, from the color of each cell. Rows count from the top.
+export function fieldColumns(
+  width: number,
+  rows: number,
+  colorAt: (column: number, row: number) => TailwindColor | null,
+): (TailwindColor | null)[][] {
+  return Array.from({ length: width }, (_, column) =>
+    Array.from({ length: rows }, (_, row) => colorAt(column, row)),
+  )
+}
+
 // Sets each snail on a flat patch at the highest ground beneath it, flattening `heights`.
 export function settleSnails(heights: number[], lefts: number[]): FieldSnail[] {
   return lefts.map((left) => {

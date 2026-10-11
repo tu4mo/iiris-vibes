@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { music } from '../../audio/music'
 import type { Field, FieldSnail } from '../../game/field'
 import { pickupBottom, pickupShape } from '../../game/pickup'
+import { clamp } from '../../game/math'
 import type { Sprite } from '../../game/sprite'
 
 // Walking speed in cells per second.
@@ -53,10 +54,7 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
   const [finished, setFinished] = useState(false)
 
   // Read by the game loop without restarting it when the editor opens or closes.
-  const pausedRef = useRef(paused)
-  useEffect(() => {
-    pausedRef.current = paused
-  }, [paused])
+  const isPaused = useEffectEvent(() => paused)
   // Where the unicorn is, kept across loop restarts: editing the unicorn restarts the loop
   // with the new sprite, and it should carry on from the same spot.
   const placeRef = useRef<{ position: number; facing: 1 | -1 }>({
@@ -81,20 +79,25 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
     const squishedUntil = field.snails.map(() => 0)
     let squishedKey = ''
 
-    // Hooves are the bottom row of a frame; mirror their columns when facing left.
-    function hooves(shown: Sprite, x: number, facingNow: 1 | -1) {
-      return shown.pixels
-        .filter((p) => p.y === shown.height - 1)
-        .map((p) => Math.floor(x) + (facingNow === 1 ? p.x : sprite.width - 1 - p.x))
-    }
-    function overlapsSnail(columns: number[], snail: FieldSnail) {
-      return columns.some((c) => c >= snail.left && c < snail.right)
-    }
+    // Hooves are the bottom row of a frame: their columns from the frame's left edge.
+    const hoofColumns = new Map(
+      [sprite, ...steps].map((shown) => [
+        shown,
+        shown.pixels.filter((p) => p.y === shown.height - 1).map((p) => p.x),
+      ]),
+    )
     // Every column a hoof can occupy in any walking frame. Snail collisions use this, so
     // a mid-step hoof can't poke into a shell that the blocking check didn't see.
-    function footprint(x: number, facingNow: 1 | -1) {
-      const columns = [sprite, ...steps].flatMap((shown) => hooves(shown, x, facingNow))
-      return [...new Set(columns)]
+    const footprintColumns = [...new Set([...hoofColumns.values()].flat())]
+    // Columns placed at `x` in the field, mirrored when facing left.
+    function place(columns: number[], x: number, facingNow: 1 | -1) {
+      return columns.map((c) => Math.floor(x) + (facingNow === 1 ? c : sprite.width - 1 - c))
+    }
+    const hooves = (shown: Sprite, x: number, facingNow: 1 | -1) =>
+      place(hoofColumns.get(shown)!, x, facingNow)
+    const footprint = (x: number, facingNow: 1 | -1) => place(footprintColumns, x, facingNow)
+    function overlapsSnail(columns: number[], snail: FieldSnail) {
+      return columns.some((c) => c >= snail.left && c < snail.right)
     }
     // What the unicorn stands on: terrain under the hooves being shown, or a snail's shell.
     function floorUnder(x: number, shown: Sprite, facingNow: 1 | -1) {
@@ -111,7 +114,7 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
 
     function handleKeyDown(event: KeyboardEvent) {
       // Leave keys alone for the editor while it's open.
-      if (pausedRef.current) return
+      if (isPaused()) return
       if (event.code === 'Space') {
         // Also stops Space from pressing a focused button.
         event.preventDefault()
@@ -135,7 +138,7 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
       if (done) return
       const dt = Math.min((now - last) / 1000, 0.1)
       last = now
-      if (pausedRef.current) {
+      if (isPaused()) {
         held.clear()
         jumpQueued = false
       }
@@ -143,7 +146,7 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
 
       if (direction !== 0) {
         facing = direction > 0 ? 1 : -1
-        const next = Math.min(maxX, Math.max(0, position + direction * SPEED * dt))
+        const next = clamp(position + direction * SPEED * dt, 0, maxX)
         const here = footprint(position, facing)
         const there = footprint(next, facing)
         // A snail blocks the way unless the hooves are already above its shell.

@@ -1,3 +1,5 @@
+import { smoothstep } from './math'
+
 // Seeded randomness for generating levels: the same seed always builds the same world.
 
 // Deterministic pseudo-random number in [0, 1) for a seed and up to two coordinates.
@@ -15,10 +17,9 @@ export function pick<T>(items: readonly T[], r: number): T {
 export function valueNoise(seed: number, column: number, spacing: number, salt: number) {
   const k = Math.floor(column / spacing)
   const t = column / spacing - k
-  const eased = t * t * (3 - 2 * t)
   const a = hash(seed, k, salt)
   const b = hash(seed, k + 1, salt)
-  return a + (b - a) * eased
+  return a + (b - a) * smoothstep(t)
 }
 
 // Positions from `from` up to (not including) `to`, each a random distance from the one

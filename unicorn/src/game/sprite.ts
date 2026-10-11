@@ -123,8 +123,8 @@ function edgeTest(sprite: Sprite): (p: Pixel) => boolean {
 }
 
 // The outline's color: the most common color around the sprite's edge.
-export function outlineColor(sprite: Sprite) {
-  return mostCommon(sprite.pixels.filter(edgeTest(sprite)).map((p) => p.color))
+export function outlineColor(sprite: Sprite, isEdge = edgeTest(sprite)) {
+  return mostCommon(sprite.pixels.filter(isEdge).map((p) => p.color))
 }
 
 // The eye: the largest blob in the outline's color that sits fully inside the sprite,
@@ -134,7 +134,7 @@ export function outlineColor(sprite: Sprite) {
 export function findEye(sprite: Sprite): Pixel[] | null {
   const byKey = new Map(sprite.pixels.map((p) => [cellKey(p), p]))
   const touchesOutside = edgeTest(sprite)
-  const outline = mostCommon(sprite.pixels.filter(touchesOutside).map((p) => p.color))
+  const outline = outlineColor(sprite, touchesOutside)
   const candidates = connectedGroups(
     sprite.pixels.filter((p) => p.color === outline && !touchesOutside(p)),
   )

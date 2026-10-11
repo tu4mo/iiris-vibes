@@ -17,14 +17,11 @@ export type Outdoors = {
 }
 
 // Inside: a wall right behind the field, scrolling with it.
-export type Indoors = { kind: 'indoors'; wall: Wall }
+type Indoors = { kind: 'indoors'; wall: Wall }
 
 // One scene of the game. The unicorn starts at the left and walks right to the field's
 // exit; reaching it moves on to the next level in LEVELS, or ends the game after the last.
 export type Level = {
-  // Size of the field in cells.
-  width: number
-  rows: number
   // Builds the field. Called once per play of the level, with a fresh random seed.
   generate: (seed: number) => Field
   // What's behind the field.

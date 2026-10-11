@@ -1,4 +1,4 @@
-import { useId, useRef } from 'react'
+import { useId, useRef, useState, type ToggleEvent } from 'react'
 
 // A popover opened from a toolbar button and placed to its right.
 // Popovers render in the top layer, so the toolbar's overflow can't clip them,
@@ -7,6 +7,7 @@ export function useAnchoredPopover() {
   const popoverId = useId()
   const buttonRef = useRef<HTMLButtonElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false)
 
   function position() {
     const button = buttonRef.current
@@ -22,8 +23,15 @@ export function useAnchoredPopover() {
   }
 
   return {
+    // Whether the popover is showing, so its contents can be left unrendered while it isn't.
+    open,
     hide,
     buttonProps: { ref: buttonRef, popoverTarget: popoverId, onClick: position },
-    popoverProps: { ref: popoverRef, id: popoverId, popover: 'auto' as const },
+    popoverProps: {
+      ref: popoverRef,
+      id: popoverId,
+      popover: 'auto' as const,
+      onBeforeToggle: (event: ToggleEvent<HTMLDivElement>) => setOpen(event.newState === 'open'),
+    },
   }
 }

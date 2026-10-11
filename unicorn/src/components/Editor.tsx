@@ -14,6 +14,12 @@ import { ResetButton } from './toolbar/ResetButton'
 import { Toolbar, ToolbarGroup } from './toolbar/Toolbar'
 import { ToolbarButton } from './toolbar/ToolbarButton'
 
+const TOOLS = [
+  { tool: 'draw', label: 'Draw', Icon: PencilIcon },
+  { tool: 'erase', label: 'Erase', Icon: EraserIcon },
+  { tool: 'pick', label: 'Pick color', Icon: PipetteIcon },
+] as const
+
 type EditorProps = {
   open: boolean
   onClose: () => void
@@ -61,23 +67,16 @@ export function Editor({ open, onClose, drawing, paint, reset, setHairStyle }: E
         <div className="flex min-h-0">
           <Toolbar>
             <ToolbarGroup label="Drawing">
-              <ToolbarButton label="Draw" active={tool === 'draw'} onClick={() => setTool('draw')}>
-                <PencilIcon />
-              </ToolbarButton>
-              <ToolbarButton
-                label="Erase"
-                active={tool === 'erase'}
-                onClick={() => setTool('erase')}
-              >
-                <EraserIcon />
-              </ToolbarButton>
-              <ToolbarButton
-                label="Pick color"
-                active={tool === 'pick'}
-                onClick={() => setTool('pick')}
-              >
-                <PipetteIcon />
-              </ToolbarButton>
+              {TOOLS.map(({ tool: option, label, Icon }) => (
+                <ToolbarButton
+                  key={option}
+                  label={label}
+                  active={tool === option}
+                  onClick={() => setTool(option)}
+                >
+                  <Icon />
+                </ToolbarButton>
+              ))}
             </ToolbarGroup>
 
             {hairStyle && (

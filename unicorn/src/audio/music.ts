@@ -102,7 +102,9 @@ class Music {
     // Fell behind (the timer was throttled): carry on from now instead of rushing.
     if (playing.nextTime < context.currentTime) playing.nextTime = context.currentTime + 0.05
     while (playing.nextTime < context.currentTime + LOOKAHEAD) {
-      for (const event of compiled.events[playing.step]) {
+      // Muted, the song keeps time without building notes nobody will hear.
+      const events = this.muted ? [] : compiled.events[playing.step]
+      for (const event of events) {
         if (event.kind === 'drum')
           this.drum(event.drum, event.volume, playing.nextTime, playing.gain)
         else {

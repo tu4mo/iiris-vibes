@@ -17,7 +17,7 @@ type HairPickerProps = {
 }
 
 export function HairPicker({ drawing, value, onChange }: HairPickerProps) {
-  const { hide, buttonProps, popoverProps } = useAnchoredPopover()
+  const { open, hide, buttonProps, popoverProps } = useAnchoredPopover()
 
   function select(style: HairStyle) {
     onChange(style)
@@ -35,18 +35,21 @@ export function HairPicker({ drawing, value, onChange }: HairPickerProps) {
       </ToolbarButton>
 
       <ToolbarPopover popoverProps={popoverProps} label="Hair colors">
-        <div className="flex flex-col gap-0.5">
-          {HAIR_STYLES.map((style) => (
-            <PopoverOption
-              key={style.id}
-              selected={style.id === value.id}
-              onClick={() => select(style)}
-            >
-              <DrawingPreview drawing={applyHairStyle(drawing, style)} />
-              {style.name}
-            </PopoverOption>
-          ))}
-        </div>
+        {/* Each preview composes a whole drawing, so only while they're showing. */}
+        {open && (
+          <div className="flex flex-col gap-0.5">
+            {HAIR_STYLES.map((style) => (
+              <PopoverOption
+                key={style.id}
+                selected={style.id === value.id}
+                onClick={() => select(style)}
+              >
+                <DrawingPreview drawing={applyHairStyle(drawing, style)} />
+                {style.name}
+              </PopoverOption>
+            ))}
+          </div>
+        )}
       </ToolbarPopover>
     </>
   )

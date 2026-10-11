@@ -2,9 +2,9 @@ import { MEADOW_SONG } from '../../audio/songs'
 import type { TailwindColor } from '../../drawing/colors'
 import type { Pixel } from '../../drawing/types'
 import { CASTLE, CASTLE_DOOR_LEFT } from '../castle'
-import { settleSnails, stamp, type Field } from '../field'
+import { fieldColumns, settleSnails, stamp, type Field } from '../field'
 import { hash, pick, spread, valueNoise } from '../random'
-import type { Sky } from '../sky'
+import { DAY_SKY, rainbowColor, type Sky } from '../sky'
 import { SNAIL_WIDTH } from '../snail'
 import type { Level } from './level'
 
@@ -60,7 +60,9 @@ const inPuff = (p: Puff, column: number, row: number) =>
 function cloudColor(clouds: Cloud[], column: number, row: number): TailwindColor | null {
   for (const cloud of clouds) {
     if (row >= cloud.bottom) continue
-    const front = cloud.puffs.filter((p) => inPuff(p, column, row)).sort((a, b) => b.y - a.y)[0]
+    // The lowest puff covering the cell is in front.
+    let front: Puff | undefined
+    for (const p of cloud.puffs) if (inPuff(p, column, row) && (!front || p.y > front.y)) front = p
     if (!front) continue
     if (row === cloud.bottom - 1) return 'blue-200'
     if (row === cloud.bottom - 2) return 'sky-200'
@@ -73,15 +75,14 @@ function cloudColor(clouds: Cloud[], column: number, row: number): TailwindColor
 }
 
 // The color of a field cell, or null for open sky (the layers behind show through).
-// Rows count from the top of a field `rows` tall.
+// Rows count from the top.
 function cellColor(
   seed: number,
   column: number,
   row: number,
-  rows: number,
   height: number,
 ): TailwindColor | null {
-  const groundTop = rows - height
+  const groundTop = ROWS - height
   const depth = row - groundTop
 
   if (depth >= 0) {
@@ -102,18 +103,6 @@ function cellColor(
   return null
 }
 
-// A clear day sky from deep blue at the top to pale blue at the horizon.
-export const DAY_SKY: Sky = [
-  'blue-500',
-  'blue-400',
-  'blue-300',
-  'sky-300',
-  'sky-200',
-  'cyan-100',
-  'sky-100',
-  'blue-50',
-]
-
 // Evening near the castle: dusky violet at the top, red and orange at the horizon.
 const DUSK_SKY: Sky = [
   'indigo-600',
@@ -127,15 +116,6 @@ const DUSK_SKY: Sky = [
 ]
 
 // The backdrop behind the field: clouds and a big rainbow, as pixels.
-export const RAINBOW: TailwindColor[] = [
-  'red-400',
-  'orange-400',
-  'amber-300',
-  'green-400',
-  'sky-400',
-  'indigo-400',
-  'violet-400',
-]
 const RAINBOW_BAND = 3
 
 function generateBackdrop(seed: number, width: number, rows: number): Pixel[] {
@@ -146,13 +126,8 @@ function generateBackdrop(seed: number, width: number, rows: number): Pixel[] {
   const outer = Math.min(rows - 24, width / 2 - 4)
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < width; x++) {
-      const distance = Math.hypot(x + 0.5 - center.x, y + 0.5 - center.y)
-      const band = Math.floor((outer - distance) / RAINBOW_BAND)
-      if (band >= 0 && band < RAINBOW.length) pixels.push({ x, y, color: RAINBOW[band] })
-      else {
-        const color = cloudColor(clouds, x, y)
-        if (color) pixels.push({ x, y, color })
-      }
+      const color = rainbowColor(center, outer, RAINBOW_BAND, x, y) ?? cloudColor(clouds, x, y)
+      if (color) pixels.push({ x, y, color })
     }
   }
   return pixels
@@ -176,8 +151,8 @@ function generateField(seed: number): Field {
   const lastSnail = castleLeft - FLAT_APPROACH - 20 - SNAIL_WIDTH
   const snails = settleSnails(heights, spread(seed, 30, firstSnail, lastSnail, SNAIL_GAP))
 
-  const columns = Array.from({ length: WIDTH }, (_, column) =>
-    Array.from({ length: ROWS }, (_, row) => cellColor(seed, column, row, ROWS, heights[column])),
+  const columns = fieldColumns(WIDTH, ROWS, (column, row) =>
+    cellColor(seed, column, row, heights[column]),
   )
   stamp(columns, CASTLE, castleLeft, CASTLE_GROUND)
 
@@ -194,8 +169,6 @@ function generateField(seed: number): Field {
 }
 
 export const MEADOW: Level = {
-  width: WIDTH,
-  rows: ROWS,
   generate: generateField,
   scenery: {
     kind: 'outdoors',

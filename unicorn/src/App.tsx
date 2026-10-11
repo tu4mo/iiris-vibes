@@ -7,10 +7,14 @@ import { useDrawing } from './hooks/useDrawing'
 function App() {
   const drawing = useDrawing()
   const [editing, setEditing] = useState(false)
+  // The game only takes up the drawing once the editor closes, rather than rebuilding the
+  // unicorn behind the editor on every stroke.
+  const [gameDrawing, setGameDrawing] = useState(drawing.drawing)
+  if (!editing && gameDrawing !== drawing.drawing) setGameDrawing(drawing.drawing)
 
   return (
     <>
-      <Game drawing={drawing.drawing} paused={editing} onEdit={() => setEditing(true)} />
+      <Game drawing={gameDrawing} paused={editing} onEdit={() => setEditing(true)} />
       <Editor {...drawing} open={editing} onClose={() => setEditing(false)} />
     </>
   )
