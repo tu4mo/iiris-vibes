@@ -3,10 +3,12 @@ import { music } from '../../audio/music'
 import type { Field, FieldSnail } from '../../game/field'
 import { pickupBottom, pickupShape } from '../../game/pickup'
 import { clamp } from '../../game/math'
-import type { Sprite } from '../../game/sprites/unicorn'
+import { posed, type Gait, type Pose, type Sprite } from '../../game/sprites/unicorn'
 
 // Walking speed in cells per second.
 const SPEED = 24
+// How long each step of the walk cycle shows, in ms.
+const STEP_FOR = 90
 // Jump physics in cells and seconds: about 18 cells high and 1.3 s in the air,
 // enough to clear a snail with room to spare.
 const GRAVITY = 80
@@ -26,8 +28,8 @@ export const START_X = 8
 type PlayLoopOptions = {
   field: Field
   sprite: Sprite
-  // The two walking frames of `sprite`.
-  steps: Sprite[]
+  // `sprite` posed walking and leaping.
+  gait: Gait
   // While true (the editor is open) the loop ignores the keyboard and stands still.
   paused: boolean
 }
@@ -35,13 +37,12 @@ type PlayLoopOptions = {
 // Plays one level: reads the keyboard, runs walking, jumping, snail collisions and picking
 // things up, with their sound effects, and publishes whole-cell changes to React, a few
 // times a second while walking.
-export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
+export function usePlayLoop({ field, sprite, gait, paused }: PlayLoopOptions) {
   const maxX = Math.max(0, field.width - sprite.width)
   // The unicorn's left edge in whole cells.
   const [x, setX] = useState(START_X)
   const [facing, setFacing] = useState<1 | -1>(1)
-  // Walk cycle: null while standing, otherwise which of the two steps is showing.
-  const [step, setStep] = useState<0 | 1 | null>(null)
+  const [pose, setPose] = useState<Pose>('standing')
   // Height of the unicorn's hooves above the field's bottom, in whole cells.
   const [altitude, setAltitude] = useState(0)
   const [blink, setBlink] = useState(false)
@@ -81,7 +82,7 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
 
     // Hooves are the bottom row of a frame: their columns from the frame's left edge.
     const hoofColumns = new Map(
-      [sprite, ...steps].map((shown) => [
+      [sprite, gait.leap, ...gait.steps].map((shown) => [
         shown,
         shown.pixels.filter((p) => p.y === shown.height - 1).map((p) => p.x),
       ]),
@@ -164,15 +165,13 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
       }
       jumpQueued = false
 
-      // Legs spread mid-air; alternate steps while walking on the ground.
-      const step: 0 | 1 | null = !grounded
-        ? 0
+      // Leap mid-air; step through the walk cycle while walking on the ground.
+      const pose: Pose = !grounded
+        ? 'leaping'
         : direction === 0
-          ? null
-          : Math.floor(now / 120) % 2 === 0
-            ? 0
-            : 1
-      const floor = floorUnder(position, step === null ? sprite : steps[step], facing)
+          ? 'standing'
+          : Math.floor(now / STEP_FOR) % gait.steps.length
+      const floor = floorUnder(position, posed(sprite, gait, pose), facing)
 
       if (!grounded) {
         vy -= GRAVITY * dt
@@ -219,7 +218,7 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
       setFacing(facing)
       setX(Math.floor(position))
       setAltitude(Math.round(altitude))
-      setStep(step)
+      setPose(pose)
       // A quick blink every few seconds.
       setBlink(now % BLINK_EVERY < BLINK_FOR)
       setHornTick(Math.floor(now / HORN_FRAME))
@@ -232,7 +231,7 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
       // Done once the unicorn's left edge is past the exit.
       if (position >= field.exit) {
         done = true
-        setStep(null)
+        setPose('standing')
         setFinished(true)
         return
       }
@@ -249,7 +248,7 @@ export function usePlayLoop({ field, sprite, steps, paused }: PlayLoopOptions) {
       window.removeEventListener('keyup', handleKeyUp)
       window.removeEventListener('blur', handleBlur)
     }
-  }, [maxX, field, sprite, steps])
+  }, [maxX, field, sprite, gait])
 
-  return { x, facing, step, altitude, blink, hornTick, squished, collected, finished }
+  return { x, facing, pose, altitude, blink, hornTick, squished, collected, finished }
 }

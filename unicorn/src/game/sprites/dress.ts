@@ -4,10 +4,10 @@ import { pixelArt } from '../../drawing/pixelArt'
 import type { Shape } from '../../drawing/types'
 import {
   connectedGroups,
-  findLegs,
   mostCommon,
   outlineColor,
   recolor,
+  UNICORN_LEG_ROWS,
   type Sprite,
 } from './unicorn'
 
@@ -116,9 +116,8 @@ export const DRESS_WIDTH = DRESS_SHAPES[0].width
 // of the legs like a skirt. It's the connected patch (not crossing the outline) with the
 // most of the body's color in that band, so the mane and tail stay as they are.
 function torso(sprite: Sprite): Pixel[] {
-  const legs = findLegs(sprite)
-  const legTop =
-    legs.length > 0 ? Math.min(...legs.flat().map((p) => p.y)) : Math.round(sprite.height * 0.8)
+  // The legs are at the bottom of the sprite.
+  const legTop = sprite.height - UNICORN_LEG_ROWS
   const top = legTop - Math.round(sprite.height * 0.22)
   const outline = outlineColor(sprite)
   const band = sprite.pixels.filter((p) => p.y >= top && p.y <= legTop + 1 && p.color !== outline)

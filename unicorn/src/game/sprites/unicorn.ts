@@ -28,8 +28,8 @@ const COLORS: Record<string, TailwindColor> = {
   p: 'purple-800',
 }
 
-// The outline, horn, hooves and the white body with its shading. The eye is drawn
-// separately, over it.
+// The outline, horn and the white body with its shading. The eye and the legs are drawn
+// separately.
 const BODY = `
   ........................kkk.
   .......................kaWk.
@@ -58,10 +58,6 @@ const BODY = `
   k.....kkbWWbbbbbbbWWggk.....
   .k...k.kbWBggggggbWWggk.....
   ..kkk..kbWgkkkkkkbWWkgk.....
-  .......kgbgkggk..kbWkgk.....
-  .......kgggkggk..kbWkk......
-  .......krrk.kk...krrk.......
-  ........kk........kk........
 `
 
 // The mane, forelock and tail, in the rainbow hair style's colors (see presets/hairStyles.ts).
@@ -115,10 +111,69 @@ const EYE_CLOSED = `
   kkk
 `
 
+// The legs in each pose, drawn below the body at UNICORN_LEGS in its frame. Standing,
+// the walk cycle (the back and front legs take turns lifting and swinging forward), and
+// leaping. Some hooves are on the bottom row in every pose: the unicorn stands on them.
+export const UNICORN_LEGS = { x: 0, y: 27 }
+const LEGS_STANDING = `
+  .......kgbgkggk..kbWkgk.....
+  .......kgggkggk..kbWkk......
+  .......krrk.kk...krrk.......
+  ........kk........kk........
+`
+const LEGS_WALK = [
+  `
+  .......kgbgkggk..kbWkgk.....
+  ........kgggkggkkbWkk.......
+  ........krrk.kk.krrk........
+  .........kk......kk.........
+`,
+  `
+  .......kgbgkggk..kbWkk......
+  .......kgggkggk..krrk.......
+  .......krrk.kk....kk........
+  ........kk..................
+`,
+  `
+  .......kgbgkggk..kbWkgk.....
+  ......kgggkggk....kbWkk.....
+  ......krrk.kk.....krrk......
+  .......kk..........kk.......
+`,
+  `
+  .......kgggkggk..kbWkgk.....
+  .......krrk.kk...kbWkk......
+  ........kk.......krrk.......
+  ..................kk........
+`,
+]
+const LEGS_LEAP = LEGS_WALK[2]
+
+// What the unicorn is doing: standing, leaping, or which step of the walk cycle it's on.
+export type Pose = 'standing' | 'leaping' | number
+export const WALK_STEPS = LEGS_WALK.map((_, i) => i)
+
 export const UNICORN_BODY: Shape = pixelArt(BODY, COLORS)
 export const UNICORN_HAIR: Shape = pixelArt(HAIR, COLORS)
 export const UNICORN_EYE_OPEN: Shape = pixelArt(EYE_OPEN, COLORS)
 export const UNICORN_EYE_CLOSED: Shape = pixelArt(EYE_CLOSED, COLORS)
+const LEG_SHAPES = {
+  standing: pixelArt(LEGS_STANDING, COLORS),
+  leaping: pixelArt(LEGS_LEAP, COLORS),
+  steps: LEGS_WALK.map((legs) => pixelArt(legs, COLORS)),
+}
+export const unicornLegs = (pose: Pose): Shape =>
+  typeof pose === 'number' ? LEG_SHAPES.steps[pose] : LEG_SHAPES[pose]
+// How many rows the legs take up at the bottom of the unicorn.
+export const UNICORN_LEG_ROWS = LEG_SHAPES.standing.height
+
+// The sprite in each pose: walking and leaping.
+export type Gait = { steps: Sprite[]; leap: Sprite }
+
+// The sprite in a pose, given its gait.
+export function posed(sprite: Sprite, { steps, leap }: Gait, pose: Pose): Sprite {
+  return pose === 'standing' ? sprite : pose === 'leaping' ? leap : steps[pose]
+}
 
 // The designed unicorn as a sprite: every visible layer, cropped tight.
 export function spriteFromDrawing(drawing: Drawing): Sprite {
@@ -172,44 +227,6 @@ export function connectedGroups(pixels: Pixel[]): Pixel[][] {
     groups.push(group)
   }
   return groups
-}
-
-// The legs: scanning up from the bottom, the rows where the pixels still form two or
-// more separate shapes, before they join the body. Empty when no legs can be told apart.
-export function findLegs(sprite: Sprite): Pixel[][] {
-  let legs: Pixel[][] = []
-  for (let top = sprite.height - 1; top >= 0; top--) {
-    const groups = connectedGroups(sprite.pixels.filter((p) => p.y >= top))
-    if (groups.length >= 2) legs = groups
-    else if (legs.length > 0) break
-  }
-  return legs.sort((a, b) => Math.min(...a.map((p) => p.x)) - Math.min(...b.map((p) => p.x)))
-}
-
-// Two walking frames: the lower half of each leg shifts a pixel back or forth,
-// with neighbouring legs moving in opposite directions. Same as the sprite if no legs are found.
-export function walkFrames(sprite: Sprite): [Sprite, Sprite] {
-  const legs = findLegs(sprite)
-  if (legs.length === 0) return [sprite, sprite]
-
-  const legTop = Math.min(...legs.flat().map((p) => p.y))
-  const hoovesFrom = legTop + Math.ceil((sprite.height - legTop) / 2)
-  const legIndex = new Map<Pixel, number>()
-  legs.forEach((leg, i) => leg.forEach((p) => legIndex.set(p, i)))
-
-  function frame(phase: 1 | -1): Sprite {
-    return {
-      ...sprite,
-      pixels: sprite.pixels.map((p) => {
-        const leg = legIndex.get(p)
-        if (leg === undefined || p.y < hoovesFrom) return p
-        const x = p.x + (leg % 2 === 0 ? phase : -phase)
-        // Keep pixels inside the sprite's bounds.
-        return x >= 0 && x < sprite.width ? { ...p, x } : p
-      }),
-    }
-  }
-  return [frame(1), frame(-1)]
 }
 
 export function mostCommon<T>(items: T[]): T | undefined {

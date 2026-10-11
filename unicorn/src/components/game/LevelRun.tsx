@@ -1,12 +1,17 @@
 import { useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { cssColor } from '../../drawing/colors'
-import { cellKey } from '../../drawing/grid'
 import type { Drawing } from '../../drawing/types'
 import { DRESS_STYLES, wearDress } from '../../game/sprites/dress'
 import type { Level } from '../../game/levels'
 import { clamp, smoothstep } from '../../game/math'
-import { recolor, spriteFromDrawing, walkFrames } from '../../game/sprites/unicorn'
-import { withEyeClosed } from '../../presets/defaultDrawing'
+import {
+  posed,
+  spriteFromDrawing,
+  WALK_STEPS,
+  type Pose,
+  type Sprite,
+} from '../../game/sprites/unicorn'
+import { withEyeClosed, withLegs } from '../../presets/defaultDrawing'
 import { MusicOffIcon, MusicOnIcon, PencilIcon } from '../icons'
 import { START_X, usePlayLoop } from './usePlayLoop'
 import { maneBorderStyle } from '../mane'
@@ -26,6 +31,12 @@ import {
 const MIN_CELL_SIZE = 4
 // The backdrop moves at this fraction of the field's speed.
 const PARALLAX = 0.35
+
+// The drawing as a sprite standing, walking and leaping, each passed through `finish`.
+function posesOf(drawing: Drawing, finish = (sprite: Sprite) => sprite) {
+  const as = (pose: Pose) => finish(spriteFromDrawing(withLegs(drawing, pose)))
+  return { standing: as('standing'), gait: { steps: WALK_STEPS.map(as), leap: as('leaping') } }
+}
 
 type LevelRunProps = {
   level: Level
@@ -69,35 +80,25 @@ export function LevelRun({
   // Generated once per run, with a fresh random seed.
   const [seed] = useState(() => Math.floor(Math.random() * 2 ** 31))
   const [field] = useState(() => level.generate(seed))
-  const sprite = useMemo(() => spriteFromDrawing(drawing), [drawing])
-  // What changes when the eye closes: the closed eye's pixels, in the sprite's cells.
-  const closedEye = useMemo(() => {
-    const open = new Map(sprite.pixels.map((p) => [cellKey(p), p.color]))
-    return spriteFromDrawing(withEyeClosed(drawing)).pixels.filter(
-      (p) => open.get(cellKey(p)) !== p.color,
-    )
-  }, [drawing, sprite])
-  // The physics only needs the shape, which a dress doesn't change.
-  const steps = useMemo(() => walkFrames(sprite), [sprite])
+  // The physics only needs the shapes, which a dress or a blink don't change.
+  const { standing: sprite, gait } = useMemo(() => posesOf(drawing), [drawing])
 
-  const { x, facing, step, altitude, blink, hornTick, squished, collected, finished } = usePlayLoop(
-    { field, sprite, steps, paused },
+  const { x, facing, pose, altitude, blink, hornTick, squished, collected, finished } = usePlayLoop(
+    { field, sprite, gait, paused },
   )
 
   // The unicorn wears the dress it picked up last, or the one it came in wearing.
   const wornStyle =
     collected.map((i) => field.pickups[i]).findLast((p) => p.kind === 'dress')?.style ?? dress
   const looks = useMemo(() => {
-    // Standing and the two steps, wearing the dress.
-    const worn = wornStyle === null ? sprite : wearDress(sprite, DRESS_STYLES[wornStyle])
-    const open = { standing: worn, steps: wornStyle === null ? steps : walkFrames(worn) }
-    // Blinking switches to the same poses with the eye closed.
-    const blinking = {
-      standing: recolor(open.standing, closedEye),
-      steps: open.steps.map((f) => recolor(f, closedEye)),
+    // Wearing the dress, with the eye open and closed.
+    const dressed = (sprite: Sprite) =>
+      wornStyle === null ? sprite : wearDress(sprite, DRESS_STYLES[wornStyle])
+    return {
+      open: posesOf(drawing, dressed),
+      blinking: posesOf(withEyeClosed(drawing), dressed),
     }
-    return { open, blinking }
-  }, [sprite, steps, closedEye, wornStyle])
+  }, [drawing, wornStyle])
 
   const handleExit = useEffectEvent(() => onExit(wornStyle))
   useEffect(() => {
@@ -129,9 +130,8 @@ export function LevelRun({
   const progress = smoothstep(clamp((x - START_X) / (field.exit - START_X), 0, 1))
 
   const poses = blink ? looks.blinking : looks.open
-  const shown = step === null ? poses.standing : poses.steps[step]
-  // Bob up a pixel on the second step.
-  const unicornY = field.rows - altitude - sprite.height - (step === 1 ? 1 : 0)
+  const shown = posed(poses.standing, poses.gait, pose)
+  const unicornY = field.rows - altitude - sprite.height
 
   return (
     <main
