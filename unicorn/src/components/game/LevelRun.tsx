@@ -4,7 +4,8 @@ import type { Drawing } from '../../drawing/types'
 import { DRESS_STYLES, wearDress } from '../../game/sprites/dress'
 import type { Level } from '../../game/levels'
 import { clamp, smoothstep } from '../../game/math'
-import { findEye, recolor, spriteFromDrawing, walkFrames } from '../../game/sprites/unicorn'
+import { spriteFromDrawing, walkFrames, type Sprite } from '../../game/sprites/unicorn'
+import { withEyeClosed } from '../../presets/defaultDrawing'
 import { MusicOffIcon, MusicOnIcon, PencilIcon } from '../icons'
 import { START_X, usePlayLoop } from './usePlayLoop'
 import { maneBorderStyle } from '../mane'
@@ -68,6 +69,8 @@ export function LevelRun({
   const [seed] = useState(() => Math.floor(Math.random() * 2 ** 31))
   const [field] = useState(() => level.generate(seed))
   const sprite = useMemo(() => spriteFromDrawing(drawing), [drawing])
+  // The same unicorn with its eye closed, switched in for blinking.
+  const blinkSprite = useMemo(() => spriteFromDrawing(withEyeClosed(drawing)), [drawing])
   // The physics only needs the shape, which a dress doesn't change.
   const steps = useMemo(() => walkFrames(sprite), [sprite])
 
@@ -79,16 +82,13 @@ export function LevelRun({
   const wornStyle =
     collected.map((i) => field.pickups[i]).findLast((p) => p.kind === 'dress')?.style ?? dress
   const looks = useMemo(() => {
-    const worn = wornStyle === null ? sprite : wearDress(sprite, DRESS_STYLES[wornStyle])
-    const wornSteps = wornStyle === null ? steps : walkFrames(worn)
-    // The same three poses with the eye closed, for blinking. Null if no eye was found.
-    const eye = findEye(worn)
-    const blinking = eye && {
-      standing: recolor(worn, eye),
-      steps: wornSteps.map((f) => recolor(f, eye)),
+    // Standing and the two steps, wearing the dress.
+    function poses(unicorn: Sprite) {
+      const worn = wornStyle === null ? unicorn : wearDress(unicorn, DRESS_STYLES[wornStyle])
+      return { standing: worn, steps: walkFrames(worn) }
     }
-    return { standing: worn, steps: wornSteps, blinking }
-  }, [sprite, steps, wornStyle])
+    return { open: poses(sprite), blinking: poses(blinkSprite) }
+  }, [sprite, blinkSprite, wornStyle])
 
   const handleExit = useEffectEvent(() => onExit(wornStyle))
   useEffect(() => {
@@ -119,7 +119,7 @@ export function LevelRun({
   // the sky and the shade over the land change with it.
   const progress = smoothstep(clamp((x - START_X) / (field.exit - START_X), 0, 1))
 
-  const poses = blink && looks.blinking ? looks.blinking : looks
+  const poses = blink ? looks.blinking : looks.open
   const shown = step === null ? poses.standing : poses.steps[step]
   // Bob up a pixel on the second step.
   const unicornY = field.rows - altitude - sprite.height - (step === 1 ? 1 : 0)

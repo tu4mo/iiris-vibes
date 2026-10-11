@@ -9,8 +9,8 @@ import { SIDES, type Shape } from '../shape'
 export type Sprite = Shape
 
 // The built-in unicorn, sampled 1:1 from the reference image, with each color snapped to
-// the nearest Tailwind palette color. It's drawn in two layers, so the hair can be
-// restyled on its own; both are drawn in the same frame, so they line up. The editor
+// the nearest Tailwind palette color. It's drawn in layers, so the hair can be
+// restyled on its own and the eye can blink; all are drawn in the same frame, so they line up. The editor
 // starts from these (see presets/defaultDrawing.ts), and the game turns whatever is drawn
 // into the sprite it plays with (spriteFromDrawing).
 const COLORS: Record<string, TailwindColor> = {
@@ -30,7 +30,8 @@ const COLORS: Record<string, TailwindColor> = {
   p: 'purple-800',
 }
 
-// The outline, horn, hooves and the white body with its shading.
+// The outline, horn, hooves and the white body with its shading. The eye is drawn
+// separately, over it.
 const BODY = `
   ........................kkk.
   .......................kaWk.
@@ -42,10 +43,10 @@ const BODY = `
   ..........k....kWkWk.....kk.
   ..........k....kkWWbk......k
   ..........k....kbWWWWWkkkkk.
-  .........k.....kbWWkkkWWWk..
-  .........k.....kbWWkWkWWWk..
-  ........k......kbWWkkkWWWWk.
-  ........k......kbWWkkkWWWWWk
+  .........k.....kbWWWWWWWWk..
+  .........k.....kbWWWWWWWWk..
+  ........k......kbWWWWWWWWWk.
+  ........k......kbWWWWWWWWWWk
   .........k.....kgbWWWWWWWWWk
   .........kk....kggbWWWWkWkbk
   .....kkkk......kbbggbbbbbbbk
@@ -100,8 +101,26 @@ const HAIR = `
   ............................
 `
 
+// The eye, open and closed mid-blink (the skin with a lid line along the bottom). Blinking
+// switches one for the other. Both are drawn over the body at UNICORN_EYE in its frame.
+export const UNICORN_EYE = { x: 19, y: 10 }
+const EYE_OPEN = `
+  kkk
+  kWk
+  kkk
+  kkk
+`
+const EYE_CLOSED = `
+  WWW
+  WWW
+  WWW
+  kkk
+`
+
 export const UNICORN_BODY: Shape = pixelArt(BODY, (char) => COLORS[char])
 export const UNICORN_HAIR: Shape = pixelArt(HAIR, (char) => COLORS[char])
+export const UNICORN_EYE_OPEN: Shape = pixelArt(EYE_OPEN, (char) => COLORS[char])
+export const UNICORN_EYE_CLOSED: Shape = pixelArt(EYE_CLOSED, (char) => COLORS[char])
 
 // The designed unicorn as a sprite: every visible layer, cropped tight.
 export function spriteFromDrawing(drawing: Drawing): Sprite {
@@ -222,51 +241,6 @@ function edgeTest(sprite: Sprite): (p: Pixel) => boolean {
 // The outline's color: the most common color around the sprite's edge.
 export function outlineColor(sprite: Sprite, isEdge = edgeTest(sprite)) {
   return mostCommon(sprite.pixels.filter(isEdge).map((p) => p.color))
-}
-
-// The eye: the largest blob in the outline's color that sits fully inside the sprite,
-// plus any highlight pixels it surrounds. Returns the pixels to draw it closed: the eye
-// filled with the surrounding skin color, keeping its bottom row as a dark lid line. Null
-// when no eye can be found.
-export function findEye(sprite: Sprite): Pixel[] | null {
-  const byKey = new Map(sprite.pixels.map((p) => [cellKey(p), p]))
-  const touchesOutside = edgeTest(sprite)
-  const outline = outlineColor(sprite, touchesOutside)
-  const candidates = connectedGroups(
-    sprite.pixels.filter((p) => p.color === outline && !touchesOutside(p)),
-  )
-    // Blobs connected to the outline aren't eyes.
-    .filter((group) =>
-      group.every((p) =>
-        SIDES.every((side) => {
-          const n = byKey.get(cellKey(step(p, side)))
-          return !n || n.color !== outline || group.includes(n)
-        }),
-      ),
-    )
-    .sort((a, b) => b.length - a.length)
-  const eye = candidates[0]
-  if (!eye || eye.length < 2) return null
-
-  const eyeCells: Cell[] = [...eye]
-  const eyeKeys = new Set(eyeCells.map(cellKey))
-  // Highlights: pixels whose every neighbour is part of the eye.
-  for (const p of sprite.pixels) {
-    if (!eyeKeys.has(cellKey(p)) && SIDES.every((side) => eyeKeys.has(cellKey(step(p, side))))) {
-      eyeCells.push(p)
-      eyeKeys.add(cellKey(p))
-    }
-  }
-  const neighbours = eyeCells.flatMap((c) =>
-    SIDES.map((side) => byKey.get(cellKey(step(c, side)))).filter(
-      (n): n is Pixel => !!n && !eyeKeys.has(cellKey(n)),
-    ),
-  )
-  const skin = mostCommon(neighbours.map((n) => n.color))
-  if (!skin || !outline) return null
-
-  const bottom = Math.max(...eyeCells.map((c) => c.y))
-  return eyeCells.map(({ x, y }) => ({ x, y, color: y === bottom ? outline : skin }))
 }
 
 // The sprite with some of its pixels painted over in new colors. Cells it doesn't already
