@@ -34,13 +34,15 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run build -- --base=/${{ github.event.repository.name }}/
+      - run: npm run build -- --base=/${{ github.event.repository.name }}/unicorn/
+
+      - run: mkdir -p ../_site && cp -r dist ../_site/unicorn
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: unicorn/dist
+          path: _site
 
   deploy:
     needs: build
