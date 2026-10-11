@@ -19,5 +19,9 @@ npm run lint    # oxlint
 
 - `src/drawing` – the drawing model: layers, pixels, painting, storage. No React.
 - `src/presets` – the built-in unicorn and its hair styles.
-- `src/game` – world generation (field, sky, castle, snails) and the sprite's animation frames.
-- `src/components` – the React UI: `Editor` and its toolbar, and `game/` for the game view.
+- `src/game` – shared game pieces: the `Field` model, sky bands, seeded noise, the castle and
+  snail shapes, and the sprite's animation frames.
+- `src/game/levels` – one module per level (`meadow`, `castleHall`), each exporting a `Level`;
+  `LEVELS` in `index.ts` sets the order they're played in.
+- `src/components` – the React UI: `Editor` and its toolbar, and `game/` for the game
+  view (`Game` steps through the levels, `LevelRun` plays one, `usePlayLoop` runs the physics).

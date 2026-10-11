@@ -5,7 +5,8 @@ import type { Pixel } from '../../drawing/types'
 import { SNAIL_FRAMES, SNAIL_SQUISHED, SQUISH_SPREAD } from '../../game/snail'
 import type { Shape } from '../../game/shape'
 import type { Sprite } from '../../game/sprite'
-import { skyBands, type Field } from '../../game/world'
+import type { Field } from '../../game/field'
+import { skyBands, type Sky } from '../../game/sky'
 import { PixelRects } from '../PixelArt'
 
 // Pixels as absolutely positioned divs, `cell` px each, inside a positioned parent.
@@ -62,7 +63,7 @@ export const FieldView = memo(function FieldView({ field, cell }: FieldViewProps
   )
 })
 
-type SkyViewProps = { sky: TailwindColor[]; rows: number; cell: number; opacity?: number }
+type SkyViewProps = { sky: Sky; rows: number; cell: number; opacity?: number }
 
 // The sky never moves, so it's a single div: one vertical gradient with a hard stop at
 // each band's edge.

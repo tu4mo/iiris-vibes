@@ -1,31 +1,16 @@
-import type { TailwindColor } from '../drawing/colors'
-import type { Pixel } from '../drawing/types'
-import { CASTLE, CASTLE_DOOR_LEFT } from './castle'
-import type { Shape } from './shape'
-import { SNAIL_HEIGHT, SNAIL_WIDTH } from './snail'
+import type { TailwindColor } from '../../drawing/colors'
+import type { Pixel } from '../../drawing/types'
+import { CASTLE, CASTLE_DOOR_LEFT } from '../castle'
+import { placeSnails, settleSnails, stamp, type Field } from '../field'
+import { hash, pick, valueNoise } from '../random'
+import type { Sky } from '../sky'
+import type { Level } from './level'
 
-// A rolling green field, generated column by column from a seed before the game starts.
+// The first level: a rolling green field under a rainbow, with snails to jump over and a
+// castle at the far end. Evening falls on the way there.
 
-// Deterministic pseudo-random number in [0, 1) for a seed and up to two coordinates.
-function hash(seed: number, a: number, b = 0): number {
-  let h = seed ^ Math.imul(a, 374761393) ^ Math.imul(b, 668265263)
-  h = Math.imul(h ^ (h >>> 13), 1274126177)
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
-}
-
-function pick<T>(items: readonly T[], r: number): T {
-  return items[Math.floor(r * items.length)]
-}
-
-// Smooth noise: random heights every `spacing` columns, eased in between.
-function valueNoise(seed: number, column: number, spacing: number, salt: number) {
-  const k = Math.floor(column / spacing)
-  const t = column / spacing - k
-  const eased = t * t * (3 - 2 * t)
-  const a = hash(seed, k, salt)
-  const b = hash(seed, k + 1, salt)
-  return a + (b - a) * eased
-}
+const WIDTH = 900
+const ROWS = 96
 
 // Height of the ground at a column, in cells from the bottom.
 function groundHeight(seed: number, column: number) {
@@ -116,7 +101,7 @@ function cellColor(
 }
 
 // A clear day sky from deep blue at the top to pale blue at the horizon.
-export const DAY_SKY: TailwindColor[] = [
+const DAY_SKY: Sky = [
   'blue-500',
   'blue-400',
   'blue-300',
@@ -128,7 +113,7 @@ export const DAY_SKY: TailwindColor[] = [
 ]
 
 // Evening near the castle: dusky violet at the top, red and orange at the horizon.
-export const DUSK_SKY: TailwindColor[] = [
+const DUSK_SKY: Sky = [
   'indigo-600',
   'violet-500',
   'purple-500',
@@ -139,21 +124,7 @@ export const DUSK_SKY: TailwindColor[] = [
   'amber-300',
 ]
 
-// A sky band, from row `top` down to (not including) row `bottom`.
-export type SkyBand = { color: TailwindColor; top: number; bottom: number }
-
-// The sky's bands, top to bottom. They're equal heights, and the last one takes up the rest.
-export function skyBands(rows: number, sky: TailwindColor[]): SkyBand[] {
-  const bandHeight = Math.max(2, Math.floor((rows * 0.85) / sky.length))
-  return sky.map((color, i) => ({
-    color,
-    top: i * bandHeight,
-    bottom: i < sky.length - 1 ? (i + 1) * bandHeight : Math.max(rows, i * bandHeight),
-  }))
-}
-
-// The backdrop behind the field: clouds and a big rainbow, as pixels. It scrolls slower
-// than the field for parallax, so it only needs to be `width` columns wide.
+// The backdrop behind the field: clouds and a big rainbow, as pixels.
 const RAINBOW: TailwindColor[] = [
   'red-400',
   'orange-400',
@@ -165,7 +136,7 @@ const RAINBOW: TailwindColor[] = [
 ]
 const RAINBOW_BAND = 3
 
-export function generateBackdrop(seed: number, width: number, rows: number): Pixel[] {
+function generateBackdrop(seed: number, width: number, rows: number): Pixel[] {
   const pixels: Pixel[] = []
   const clouds = generateClouds(seed, width)
   // The arc's center sits below the horizon, so its ends disappear behind the hills.
@@ -185,68 +156,42 @@ export function generateBackdrop(seed: number, width: number, rows: number): Pix
   return pixels
 }
 
-export type Field = {
-  width: number
-  rows: number
-  // Ground height per column, in cells from the bottom.
-  heights: number[]
-  // Colors per column, top row first; null is open sky.
-  columns: (TailwindColor | null)[][]
-  // The castle doorway's left column; walking into it ends the game.
-  doorLeft: number
-  // Snails to jump over: column range, and the heights of the ground they sit on and of the
-  // shell's top, from the bottom. They move, so they're drawn separately from `columns`.
-  snails: { left: number; right: number; ground: number; top: number }[]
-}
-
 // The castle stands near the right end, on flat ground that starts a little before it.
 const CASTLE_MARGIN = 6
 const CASTLE_GROUND = 16
 const FLAT_APPROACH = 10
 
-// Snails start a little into the field and stop before the castle's approach,
-// spaced a random distance apart.
+// Snails start a little into the field and stop before the castle's approach.
 const FIRST_SNAIL = 70
 const SNAIL_GAP = { min: 45, max: 80 }
 
-function placeSnails(seed: number, from: number, to: number) {
-  const lefts: number[] = []
-  let x = from + Math.floor(hash(seed, 0, 30) * 20)
-  for (let i = 1; x + SNAIL_WIDTH < to; i++) {
-    lefts.push(x)
-    x += SNAIL_GAP.min + Math.floor(hash(seed, i, 30) * (SNAIL_GAP.max - SNAIL_GAP.min))
-  }
-  return lefts
-}
-
-// Draws a shape into the field's columns, standing on the ground `ground` cells high.
-function stamp(columns: (TailwindColor | null)[][], shape: Shape, left: number, ground: number) {
-  const top = columns[0].length - ground - shape.height
-  for (const { x, y, color } of shape.pixels) {
-    const column = left + x
-    const row = top + y
-    if (column >= 0 && column < columns.length && row >= 0) columns[column][row] = color
-  }
-}
-
-export function generateField(seed: number, width: number, rows: number): Field {
-  const castleLeft = width - CASTLE_MARGIN - CASTLE.width
-  const heights = Array.from({ length: width }, (_, column) =>
+function generateField(seed: number): Field {
+  const castleLeft = WIDTH - CASTLE_MARGIN - CASTLE.width
+  const heights = Array.from({ length: WIDTH }, (_, column) =>
     column >= castleLeft - FLAT_APPROACH ? CASTLE_GROUND : groundHeight(seed, column),
   )
+  const snails = settleSnails(
+    heights,
+    placeSnails(seed, FIRST_SNAIL, castleLeft - FLAT_APPROACH - 20, SNAIL_GAP),
+  )
 
-  // Each snail sits on a flat patch at the highest ground beneath it.
-  const snails = placeSnails(seed, FIRST_SNAIL, castleLeft - FLAT_APPROACH - 20).map((left) => {
-    const right = left + SNAIL_WIDTH
-    const ground = Math.max(...heights.slice(left, right))
-    for (let x = left; x < right; x++) heights[x] = ground
-    return { left, right, ground, top: ground + SNAIL_HEIGHT }
-  })
-
-  const columns = Array.from({ length: width }, (_, column) =>
-    Array.from({ length: rows }, (_, row) => cellColor(seed, column, row, rows, heights[column])),
+  const columns = Array.from({ length: WIDTH }, (_, column) =>
+    Array.from({ length: ROWS }, (_, row) => cellColor(seed, column, row, ROWS, heights[column])),
   )
   stamp(columns, CASTLE, castleLeft, CASTLE_GROUND)
 
-  return { width, rows, heights, columns, doorLeft: castleLeft + CASTLE_DOOR_LEFT, snails }
+  // Walking into the castle's doorway finishes the level.
+  return { width: WIDTH, rows: ROWS, heights, columns, exit: castleLeft + CASTLE_DOOR_LEFT, snails }
+}
+
+export const MEADOW: Level = {
+  width: WIDTH,
+  rows: ROWS,
+  generate: generateField,
+  backdrop: generateBackdrop,
+  sky: DAY_SKY,
+  skyAtExit: DUSK_SKY,
+  shadeAtExit: 0.25,
+  hint: 'Walk to the castle with ← and →, and jump over snails with Space.',
+  exitTitle: 'You made it to the castle!',
 }
