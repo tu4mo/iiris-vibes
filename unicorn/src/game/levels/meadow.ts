@@ -1,11 +1,12 @@
 import { MEADOW_SONG } from '../../audio/songs'
 import type { TailwindColor } from '../../drawing/colors'
 import type { Pixel } from '../../drawing/types'
-import { CASTLE, CASTLE_DOOR_LEFT } from '../castle'
+import { CASTLE, CASTLE_DOOR_LEFT } from '../sprites/castle'
+import { CLOUDS } from '../sprites/clouds'
 import { fieldColumns, settleSnails, stamp, type Field } from '../field'
 import { hash, pick, spread, valueNoise } from '../random'
 import { DAY_SKY, rainbowColor, type Sky } from '../sky'
-import { SNAIL_WIDTH } from '../snail'
+import { SNAIL_WIDTH } from '../sprites/snail'
 import type { Level } from './level'
 
 // The first level: a rolling green field under a rainbow, with snails to jump over and a
@@ -23,55 +24,24 @@ function groundHeight(seed: number, column: number) {
 
 const FLOWERS: TailwindColor[] = ['rose-400', 'amber-300', 'violet-400', 'pink-300', 'white']
 
-// Clouds: one chance per chunk of columns, so they're spread out but not evenly.
+// Clouds: one chance per chunk of columns, so they're spread out but not evenly. Each is
+// placed inside its chunk, so they never overlap.
 const CLOUD_CHUNK = 48
 
-// A cloud is a row of round puffs, biggest in the middle, cut off flat at the bottom.
-type Puff = { x: number; y: number; radius: number }
-type Cloud = { bottom: number; puffs: Puff[] }
-
-function generateClouds(seed: number, width: number): Cloud[] {
-  const clouds: Cloud[] = []
+// Draws the clouds into `grid` (rows of colors, top first).
+function drawClouds(seed: number, grid: (TailwindColor | null)[][]) {
+  const width = grid[0].length
   for (let c = 0; c * CLOUD_CHUNK < width; c++) {
     if (hash(seed, c, 10) > 0.65) continue
+    const cloud = pick(CLOUDS, hash(seed, c, 12))
+    // Where the cloud's flat bottom is, in rows from the top.
     const bottom = 25 + Math.floor(hash(seed, c, 11) * 14)
-    const count = 4 + Math.floor(hash(seed, c, 12) * 3)
-    const puffs: Puff[] = []
-    let x = (c + 0.2 + hash(seed, c, 13) * 0.3) * CLOUD_CHUNK
-    for (let i = 0; i < count; i++) {
-      // 0 at the ends, 1 in the middle.
-      const middle = 1 - Math.abs((2 * i) / (count - 1) - 1)
-      const radius = 3.5 + middle * 4 + hash(seed, c * 8 + i, 14) * 2
-      if (i > 0) x += (puffs[i - 1].radius + radius) * 0.6
-      // The middle puffs ride higher, so the cloud piles up into a mound.
-      const lift = middle * 4 + hash(seed, c * 8 + i, 15) * 2
-      puffs.push({ x, y: bottom - radius * 0.5 - lift, radius })
+    const left = c * CLOUD_CHUNK + Math.floor(hash(seed, c, 13) * (CLOUD_CHUNK - cloud.width))
+    const top = bottom - cloud.height
+    for (const { x, y, color } of cloud.pixels) {
+      if (left + x < width && top + y >= 0) grid[top + y][left + x] = color
     }
-    clouds.push({ bottom, puffs })
   }
-  return clouds
-}
-
-const inPuff = (p: Puff, column: number, row: number) =>
-  Math.hypot(column + 0.5 - p.x, row + 0.5 - p.y) <= p.radius
-
-// A cloud cell's color. Lower puffs overlap higher ones, and each puff is lit from the top
-// left: white there, with a crescent of shade on its lower right. The flat bottom is shaded too.
-function cloudColor(clouds: Cloud[], column: number, row: number): TailwindColor | null {
-  for (const cloud of clouds) {
-    if (row >= cloud.bottom) continue
-    // The lowest puff covering the cell is in front.
-    let front: Puff | undefined
-    for (const p of cloud.puffs) if (inPuff(p, column, row) && (!front || p.y > front.y)) front = p
-    if (!front) continue
-    if (row === cloud.bottom - 1) return 'blue-200'
-    if (row === cloud.bottom - 2) return 'sky-200'
-    // The lit part is the puff's circle nudged up and left; the crescent outside it is shade.
-    const lit = { ...front, x: front.x - front.radius * 0.2, y: front.y - front.radius * 0.3 }
-    if (!inPuff(lit, column, row)) return 'sky-100'
-    return 'white'
-  }
-  return null
 }
 
 // The color of a field cell, or null for open sky (the layers behind show through).
@@ -119,18 +89,18 @@ const DUSK_SKY: Sky = [
 const RAINBOW_BAND = 3
 
 function generateBackdrop(seed: number, width: number, rows: number): Pixel[] {
-  const pixels: Pixel[] = []
-  const clouds = generateClouds(seed, width)
-  // The arc's center sits below the horizon, so its ends disappear behind the hills.
+  const grid = Array.from({ length: rows }, () => Array<TailwindColor | null>(width).fill(null))
+  drawClouds(seed, grid)
+  // The arc's center sits below the horizon, so its ends disappear behind the hills. It's
+  // in front of the clouds.
   const center = { x: width / 2, y: rows - 14 }
   const outer = Math.min(rows - 24, width / 2 - 4)
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < width; x++) {
-      const color = rainbowColor(center, outer, RAINBOW_BAND, x, y) ?? cloudColor(clouds, x, y)
-      if (color) pixels.push({ x, y, color })
-    }
-  }
-  return pixels
+  return grid.flatMap((row, y) =>
+    row.flatMap((cloud, x) => {
+      const color = rainbowColor(center, outer, RAINBOW_BAND, x, y) ?? cloud
+      return color ? [{ x, y, color }] : []
+    }),
+  )
 }
 
 // The castle stands near the right end, on flat ground that starts a little before it.

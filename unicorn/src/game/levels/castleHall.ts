@@ -1,9 +1,9 @@
 import { CASTLE_SONG } from '../../audio/songs'
 import type { TailwindColor } from '../../drawing/colors'
-import { DRESS_STYLES, DRESS_WIDTH } from '../dress'
+import { DRESS_STYLES, DRESS_WIDTH } from '../sprites/dress'
 import { fieldColumns, stamp, type Field, type Pickup } from '../field'
 import { hash, spread } from '../random'
-import { archDepth, outlinedShape, type Shape } from '../shape'
+import { archDepth, drawnShape, outlinedShape, type Shape } from '../shape'
 import type { Level } from './level'
 
 // The second level, inside the castle: a long hall with dresses hanging on its walls to
@@ -53,15 +53,34 @@ function windowShape(seed: number): Shape {
 }
 
 // A torch in an iron bracket.
-const TORCH = outlinedShape(5, 10, (x, u) => {
-  const dx = Math.abs(x - 2)
-  if (u <= 1) return dx <= 1 ? 'slate-600' : null
-  if (u <= 4) return dx === 0 ? 'amber-800' : null
-  if (u === 5) return dx <= 1 ? 'slate-500' : null
-  if (u <= 7) return dx === 0 ? 'amber-200' : dx === 1 ? 'orange-400' : null
-  if (u === 8) return dx === 0 ? 'amber-300' : dx === 1 ? 'orange-500' : null
-  return dx === 0 ? 'red-500' : null
-})
+const TORCH_COLORS: Record<string, TailwindColor> = {
+  k: 'indigo-950',
+  r: 'red-500',
+  Y: 'amber-300',
+  O: 'orange-500',
+  y: 'amber-200',
+  o: 'orange-400',
+  s: 'slate-500',
+  w: 'amber-800',
+  S: 'slate-600',
+}
+
+const TORCH = drawnShape(
+  `
+  ..k..
+  .krk.
+  kOYOk
+  koyok
+  koyok
+  ksssk
+  .kwk.
+  .kwk.
+  .kwk.
+  kSSSk
+  kSSSk
+  `,
+  (char) => TORCH_COLORS[char],
+)
 
 // The secret passage: a pitch-black arch with a few loose dark stones around its edge.
 const PASSAGE_WIDTH = 30

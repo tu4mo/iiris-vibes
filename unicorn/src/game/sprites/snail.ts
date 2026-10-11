@@ -1,7 +1,7 @@
-import type { TailwindColor } from '../drawing/colors'
-import { cellKey } from '../drawing/grid'
-import type { Pixel } from '../drawing/types'
-import { outlinedPixels, toShapes, type Shape } from './shape'
+import type { TailwindColor } from '../../drawing/colors'
+import { cellKey } from '../../drawing/grid'
+import type { Pixel } from '../../drawing/types'
+import { outlinedPixels, toShapes, type Shape } from '../shape'
 
 // A pixel-art snail facing left (toward the approaching unicorn), generated from simple
 // shapes. Coordinates: x from the left edge, u = rows above the ground.

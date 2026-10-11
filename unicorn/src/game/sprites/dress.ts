@@ -1,11 +1,17 @@
-import type { TailwindColor } from '../drawing/colors'
-import type { Pixel } from '../drawing/types'
-import { outlinedPixels, toShapes, type Shape } from './shape'
-import { connectedGroups, findLegs, mostCommon, outlineColor, recolor, type Sprite } from './sprite'
+import type { TailwindColor } from '../../drawing/colors'
+import type { Pixel } from '../../drawing/types'
+import { drawnShape, type Shape } from '../shape'
+import {
+  connectedGroups,
+  findLegs,
+  mostCommon,
+  outlineColor,
+  recolor,
+  type Sprite,
+} from '../unicorn'
 
 // Colorful dresses hanging on the castle walls. Jumping into one collects it, and the
-// unicorn puts it on. Coordinates while building the shape: x from the left edge,
-// u = rows above the hem.
+// unicorn puts it on.
 
 export type DressStyle = {
   main: TailwindColor
@@ -35,48 +41,51 @@ function patternColor(style: DressStyle, x: number, row: number): TailwindColor 
   return style.main
 }
 
-const CENTER = 6
-const WAIST = 9
-const SHOULDER = 13
-// The hanger's bar rests on the shoulders; its apex and hook are above.
-const HANGER = 14
+// A dress on its hanger: the hook and hanger (h), the bodice with puffed sleeves (M, the
+// main color), the sash and hem (T, the trim), the skirt (p, in the style's pattern), and
+// the outline (k).
+const DRESS = `
+  ........k......
+  .......khk.....
+  ......khkhk....
+  ......khkk.....
+  ......khk......
+  .....khkhk.....
+  ....khk.khk....
+  ...khk...khk...
+  ..khkkkkkkkhk..
+  .khhhhhhhhhhhk.
+  ..kkMMkkkMMkk..
+  ..kMMMMMMMMMk..
+  ...kMMMMMMMk...
+  ....kMMMMMk....
+  ....kTTTTTk....
+  ...kpppppppk...
+  ...kpppppppk...
+  ...kpppppppk...
+  ..kpppppppppk..
+  ..kpppppppppk..
+  ..kpppppppppk..
+  .kpppppppppppk.
+  .kpppppppppppk.
+  kTTTTTTTTTTTTTk
+`
 
-function dressColor(style: DressStyle, x: number, u: number): TailwindColor | null {
-  const dx = Math.abs(x - CENTER)
-  // A skirt flaring out from the waist to the hem.
-  if (u < WAIST) {
-    const half = 3 + ((WAIST - 1 - u) / (WAIST - 1)) * 3
-    if (dx > half) return null
-    return u === 0 ? style.trim : patternColor(style, x, u)
-  }
-  if (u === WAIST) return dx <= 2 ? style.trim : null
-  // The bodice with a scooped neckline, and puffed sleeves with rounded corners.
-  if (u <= SHOULDER) {
-    if (dx <= 2) return u === SHOULDER && dx <= 1 ? null : style.main
-    const corner = (u === WAIST + 2 || u === SHOULDER) && dx === 4
-    if (u > WAIST + 1 && dx <= 4 && !corner) return style.main
-    return null
-  }
-  // The hanger: a bar, two sides rising to a point, and a hook on top.
-  const hanger: TailwindColor = 'slate-400'
-  if (u === HANGER) return dx <= 5 ? hanger : null
-  if (u <= HANGER + 5) return dx === HANGER + 5 - u ? hanger : null
-  const hook = [
-    [CENTER, HANGER + 6],
-    [CENTER, HANGER + 7],
-    [CENTER + 1, HANGER + 8],
-    [CENTER + 2, HANGER + 7],
-  ]
-  return hook.some(([hx, hu]) => hx === x && hu === u) ? hanger : null
+// A drawn cell's color in a style. Skirt rows count up from the hem.
+function dressColor(style: DressStyle, char: string, x: number, u: number): TailwindColor {
+  if (char === 'k') return 'indigo-950'
+  if (char === 'h') return 'slate-400'
+  if (char === 'T') return style.trim
+  // The pattern lines up with the dress inside its outline.
+  if (char === 'p') return patternColor(style, x - 1, u)
+  return style.main
 }
 
-const { shapes } = toShapes(
-  DRESS_STYLES.map((style) => outlinedPixels(13, HANGER + 9, (x, u) => dressColor(style, x, u))),
-)
-
 // Each style as a dress on its hanger, all the same size.
-export const DRESS_SHAPES: Shape[] = shapes
-export const DRESS_WIDTH = shapes[0].width
+export const DRESS_SHAPES: Shape[] = DRESS_STYLES.map((style) =>
+  drawnShape(DRESS, (char, x, u) => dressColor(style, char, x, u)),
+)
+export const DRESS_WIDTH = DRESS_SHAPES[0].width
 
 // The part of the unicorn a dress covers: the body just above the legs, down over the top
 // of the legs like a skirt. It's the connected patch (not crossing the outline) with the

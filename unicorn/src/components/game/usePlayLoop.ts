@@ -3,7 +3,7 @@ import { music } from '../../audio/music'
 import type { Field, FieldSnail } from '../../game/field'
 import { pickupBottom, pickupShape } from '../../game/pickup'
 import { clamp } from '../../game/math'
-import type { Sprite } from '../../game/sprite'
+import type { Sprite } from '../../game/unicorn'
 
 // Walking speed in cells per second.
 const SPEED = 24

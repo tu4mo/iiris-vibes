@@ -1,5 +1,5 @@
-import type { TailwindColor } from '../drawing/colors'
-import { outlinedPixels, toShapes, type Shape } from './shape'
+import type { TailwindColor } from '../../drawing/colors'
+import { outlinedPixels, toShapes, type Shape } from '../shape'
 
 // A pixel-art castle, generated from simple shapes. Coordinates: x from the castle's
 // left edge, u = rows above the ground (u = 0 sits directly on the grass).

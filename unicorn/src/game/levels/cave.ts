@@ -1,6 +1,6 @@
 import { CAVE_SONG } from '../../audio/songs'
 import type { TailwindColor } from '../../drawing/colors'
-import { DIAMOND_SHAPES } from '../diamond'
+import { DIAMOND_SHAPES } from '../sprites/diamond'
 import { fieldColumns, type Field, type Pickup } from '../field'
 import { hash, pick, spread, valueNoise } from '../random'
 import { clamp } from '../math'

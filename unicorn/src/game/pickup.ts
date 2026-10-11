@@ -1,5 +1,5 @@
-import { DIAMOND_SHAPES } from './diamond'
-import { DRESS_SHAPES } from './dress'
+import { DIAMOND_SHAPES } from './sprites/diamond'
+import { DRESS_SHAPES } from './sprites/dress'
 import type { Pickup } from './field'
 
 // What each kind of pickup looks like, by style.
